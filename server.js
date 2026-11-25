@@ -105,6 +105,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x'); const p = url.pathname;
   try {
     if (!p.startsWith('/api/')) {
+      if (require('./pwa.js')(p, res)) return;
       if (p === '/' || p === '/index.html') { res.writeHead(200, {'Content-Type': MIME['.html']}); return fs.createReadStream(path.join(__dirname, 'index.html')).pipe(res); }
       res.writeHead(404); return res.end('not found');
     }
