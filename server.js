@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, user_id INTEGER, action
     const have = (await D.all(`PRAGMA table_info(${n})`)).map(c => c.name);
     for (const f of d.f) if (f.t !== 'calc' && !have.includes(f.k)) await D.exec(`ALTER TABLE ${n} ADD COLUMN ${f.k} ${colType(f)}`);
   }
+  for (const [t, c] of [['jobs', 'wm_id'], ['wmanifests', 'job_id']]) { const have = (await D.all(`PRAGMA table_info(${t})`)).map(x => x.name); if (!have.includes(c)) await D.exec(`ALTER TABLE ${t} ADD COLUMN ${c} INTEGER`); }
   await D.exec('CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT)');
   { const T = require('./templates.js'); const q = T.find(t => t.kind === 'عرض سعر'); await D.run("UPDATE templates SET name=?, body=? WHERE name='نموذج عرض السعر الثابت'", q.name, q.body);  const M = T.find(t => t.name.includes('على نموذج العميل')); await D.run("UPDATE templates SET body=? WHERE name=? AND body LIKE '%لا تشمل ضريبة القيمة المضافة. القيمة التقديرية%'", M.body, M.name); 
     await D.run("UPDATE templates SET body=? WHERE kind='عرض سعر' AND body LIKE 'الشروط والأحكام:%الأسعار بالريال السعودي%'", q.body);
@@ -104,6 +105,31 @@ const cookie = req => Object.fromEntries((req.headers.cookie||'').split(';').map
 const sessionUser = async req => { const t = cookie(req).sid; if(!t) return null;
   return await D.get("SELECT u.id,u.name,u.username,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>? AND u.active='1'", t, Date.now()) || null; };
 const attempts = {};
+async function syncManifest(id, uid) {
+  const m = await D.get('SELECT * FROM wmanifests WHERE id=?', id); if (!m) return;
+  let job = await D.get('SELECT * FROM jobs WHERE wm_id=?', id);
+  if (!job && m.serial) job = await D.get('SELECT * FROM jobs WHERE manifest=? AND wm_id IS NULL', m.serial);
+  const u0 = String(m.qty_unit || ''); let qty = null; const n = parseFloat(String(m.qty || '').replace(/,/g, ''));
+  if (isFinite(n)) qty = u0.startsWith('طن') ? n * 1000 : n;
+  const extra = []; if (isFinite(n) && u0 && !/^(كجم|طن)/.test(u0)) extra.push('الكمية في الوثيقة: ' + m.qty + ' ' + u0);
+  if (m.tr_driver) extra.push('السائق: ' + m.tr_driver);
+  const v = { manifest: m.serial, client_id: m.client_id || null, contract_id: m.contract_id || null, waste_type: m.waste_type || null, qty, vehicle_id: m.vehicle_id || null, vehicle: m.tr_vehicle || null, disposal_site: m.fac_name || null, job_date: m.mdate || null, pickup_address: m.gen_address || null };
+  if (!job) {
+    const st = m.tr_rdate ? 'تم الجمع' : 'مجدولة';
+    const ks = Object.keys(v).filter(k => v[k] !== null && v[k] !== '');
+    const ins = await D.run(`INSERT INTO jobs(${ks.join(',')},status,notes,wm_id,created_by) VALUES(${ks.map(() => '?').join(',')},?,?,?,?)`, ...ks.map(k => v[k]), st, ['من وثيقة النقل ' + (m.serial || '')].concat(extra).join(' | '), id, uid);
+    await D.run('UPDATE wmanifests SET job_id=? WHERE id=?', Number(ins.lastInsertRowid), id);
+    await D.run('INSERT INTO audit(user_id,action,res,rec) VALUES(?,?,?,?)', uid, 'create', 'jobs', Number(ins.lastInsertRowid));
+    return;
+  }
+  const ks = Object.keys(v).filter(k => v[k] !== null && v[k] !== '');
+  const sets = ks.map(k => k + '=?'); const vals = ks.map(k => v[k]);
+  if (!job.notes && extra.length) { sets.push('notes=?'); vals.push(['من وثيقة النقل ' + (m.serial || '')].concat(extra).join(' | ')); }
+  sets.push('wm_id=?'); vals.push(id);
+  await D.run(`UPDATE jobs SET ${sets.join(',')} WHERE id=?`, ...vals, job.id);
+  await D.run('UPDATE wmanifests SET job_id=? WHERE id=?', job.id, id);
+  await D.run('INSERT INTO audit(user_id,action,res,rec) VALUES(?,?,?,?)', uid, 'update', 'jobs', job.id);
+}
 const clean = (d, o) => { const out = {}; for (const f of d.f) if (f.t!=='calc' && f.t!=='pass' && o[f.k]!==undefined) out[f.k] = (colType(f)==='REAL' ? (o[f.k]===''||o[f.k]===null?null:Number(o[f.k])) : String(o[f.k]).slice(0,f.t==='area'?30000:2000)); return out; };
 
 async function listRes(name, u) {
@@ -241,6 +267,7 @@ const server = http.createServer(async (req, res) => {
         const o = clean(d, b); const ks = Object.keys(o);
         const r = await D.run(`INSERT INTO ${name}(${ks.join(',')},created_by) VALUES(${ks.map(()=>'?').join(',')},?)`, ...ks.map(k=>o[k]), u.id);
         await D.run('INSERT INTO audit(user_id,action,res,rec) VALUES(?,?,?,?)', u.id,'create',name,Number(r.lastInsertRowid));
+        if (name==='wmanifests') { try { await syncManifest(Number(r.lastInsertRowid), u.id); } catch (e) { console.error('syncManifest', e); } }
         return send(res, 200, { id: Number(r.lastInsertRowid) });
       }
       if (id && (req.method === 'PUT' || req.method === 'DELETE')) {
@@ -264,6 +291,7 @@ const server = http.createServer(async (req, res) => {
         const o = clean(d, b); const ks = Object.keys(o);
         if (ks.length) await D.run(`UPDATE ${name} SET ${ks.map(k=>k+'=?').join(',')} WHERE id=?`, ...ks.map(k=>o[k]), id);
         await D.run('INSERT INTO audit(user_id,action,res,rec) VALUES(?,?,?,?)', u.id,'update',name,id);
+        if (name==='wmanifests') { try { await syncManifest(id, u.id); } catch (e) { console.error('syncManifest', e); } }
         return send(res, 200, { ok: 1 });
       }
     }
