@@ -25,11 +25,11 @@ const ROLES = { manager: 'مدير', employee: 'موظف', marketer: 'مسوّق
 // resource schema: fields {k,l(label),t(type),opts,ref,req}; r=roles read, w=roles write, own=role restricted to own records
 const R = {
   clients: { title: 'العملاء', r: ['manager','employee','marketer'], w: ['manager','marketer'], own: ['marketer'],
-    f: [{k:'name',l:'اسم المنشأة',req:1},{k:'sector',l:'القطاع',t:'sel',opts:['مستشفى','مصنع','مختبر','محطة وقود','أخرى']},{k:'contact',l:'مسؤول التواصل'},{k:'phone',l:'الجوال'},{k:'city',l:'المدينة'},{k:'status',l:'الحالة',t:'sel',opts:['محتمل','نشط','موقوف']}] },
+    f: [{k:'name',l:'اسم المنشأة',req:1},{k:'sector',l:'القطاع',t:'sel',opts:['مستشفى','مصنع','مختبر','محطة وقود','أخرى']},{k:'contact',l:'مسؤول التواصل'},{k:'phone',l:'رقم الجوال'},{k:'whatsapp',l:'رقم واتساب (إن اختلف)'},{k:'email',l:'البريد الإلكتروني'},{k:'contact_pref',l:'طريقة التواصل المفضلة',t:'sel',opts:['اتصال هاتفي','واتساب','رسالة نصية','بريد إلكتروني']},{k:'city',l:'المدينة'},{k:'address',l:'العنوان'},{k:'tax_no',l:'الرقم الضريبي / السجل التجاري'},{k:'status',l:'الحالة',t:'sel',opts:['محتمل','نشط','موقوف']},{k:'notes',l:'ملاحظات عن العميل',t:'area'}] },
   quotes: { title: 'عروض الأسعار', r: ['manager','marketer'], w: ['manager','marketer'], own: ['marketer'],
-    f: [{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'waste_type',l:'نوع المخلفات',t:'sel',opts:['طبية معدية','كيميائية','زيوت مستعملة','بطاريات','مخلفات صناعية','حادة']},{k:'qty',l:'الكمية المتوقعة (كجم)',t:'num'},{k:'unit_price',l:'سعر الكجم (ر.س)',t:'num'},{k:'total',l:'الإجمالي شامل ضريبة 15%',t:'calc'},{k:'valid_until',l:'صالح حتى',t:'date'},{k:'status',l:'الحالة',t:'sel',opts:['مسودة','مُرسل','مقبول','مرفوض']}] },
+    f: [{k:'number',l:'رقم العرض'},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'waste_type',l:'نوع المخلفات',t:'sel',opts:['طبية معدية','كيميائية','زيوت مستعملة','بطاريات','مخلفات صناعية','حادة']},{k:'qty',l:'الكمية المتوقعة (كجم)',t:'num'},{k:'unit_price',l:'سعر الكجم (ر.س)',t:'num'},{k:'total',l:'الإجمالي شامل ضريبة 15%',t:'calc'},{k:'valid_until',l:'صالح حتى',t:'date'},{k:'status',l:'الحالة',t:'sel',opts:['مسودة','مُرسل','مقبول','مرفوض']},{k:'body',l:'نص العرض والشروط',t:'area'}] },
   contracts: { title: 'العقود', r: ['manager','employee','marketer'], w: ['manager','marketer'], own: ['marketer'],
-    f: [{k:'number',l:'رقم العقد',req:1},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'scope',l:'نطاق الخدمة',t:'sel',opts:['جمع','جمع ونقل','جمع ونقل وتخلص']},{k:'start_date',l:'البداية',t:'date'},{k:'end_date',l:'النهاية',t:'date'},{k:'value',l:'قيمة العقد (ر.س)',t:'num'},{k:'status',l:'الحالة',t:'sel',opts:['ساري','منتهي','موقوف']},{k:'notes',l:'شروط وملاحظات',t:'area'}] },
+    f: [{k:'number',l:'رقم العقد',req:1},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'scope',l:'نطاق الخدمة',t:'sel',opts:['جمع','جمع ونقل','جمع ونقل وتخلص']},{k:'start_date',l:'البداية',t:'date'},{k:'end_date',l:'النهاية',t:'date'},{k:'value',l:'قيمة العقد (ر.س)',t:'num'},{k:'status',l:'الحالة',t:'sel',opts:['ساري','منتهي','موقوف']},{k:'notes',l:'ملاحظات داخلية',t:'area'},{k:'contract_text',l:'نص العقد الكامل',t:'area'}] },
   jobs: { title: 'العمليات (جمع ونقل وتخلص)', r: ['manager','employee'], w: ['manager','employee'],
     f: [{k:'manifest',l:'رقم بيان النقل',req:1},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'contract_id',l:'العقد',t:'ref',ref:'contracts'},{k:'waste_type',l:'نوع المخلفات',t:'sel',opts:['طبية معدية','كيميائية','زيوت مستعملة','بطاريات','مخلفات صناعية','حادة']},{k:'qty',l:'الكمية (كجم)',t:'num'},{k:'job_date',l:'تاريخ الجمع',t:'date'},{k:'vehicle',l:'المركبة'},{k:'driver_id',l:'السائق/الموظف',t:'ref',ref:'users'},{k:'disposal_site',l:'موقع التخلص'},{k:'status',l:'المرحلة',t:'sel',opts:['مجدولة','تم الجمع','في النقل','تم التخلص']}] },
   transactions: { title: 'الإيرادات والمصروفات', r: ['manager','employee'], w: ['manager'], wcreate: ['manager','employee'],
@@ -49,6 +49,10 @@ CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY, user_id INTEGER, exp
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, user_id INTEGER, action TEXT, res TEXT, rec INTEGER, at TEXT DEFAULT CURRENT_TIMESTAMP)`);
   for (const [n, d] of Object.entries(R)) if (n !== 'users')
     await D.exec(`CREATE TABLE IF NOT EXISTS ${n}(id INTEGER PRIMARY KEY, ${d.f.filter(f=>f.t!=='calc').map(f=>f.k+' '+colType(f)).join(',')}, created_by INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP)`);
+  for (const [n, d] of Object.entries(R)) if (n !== 'users') { // add columns introduced after first deploy
+    const have = (await D.all(`PRAGMA table_info(${n})`)).map(c => c.name);
+    for (const f of d.f) if (f.t !== 'calc' && !have.includes(f.k)) await D.exec(`ALTER TABLE ${n} ADD COLUMN ${f.k} ${colType(f)}`);
+  }
   if (!await D.get('SELECT 1 x FROM users')) {
     if (process.env.NO_DEMO) { // production: only the manager account; password from ADMIN_PASSWORD (required)
       if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.length < 12) throw new Error('Set ADMIN_PASSWORD (12+ chars) when NO_DEMO=1');
