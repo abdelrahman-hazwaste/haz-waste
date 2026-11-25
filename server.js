@@ -42,6 +42,8 @@ const R = {
     f: [{k:'number',l:'رقم الشهادة',req:1},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'job_id',l:'العملية (بيان النقل)',t:'ref',ref:'jobs'},{k:'waste_type',l:'نوع المخلفات'},{k:'qty',l:'الكمية (كجم)',t:'num'},{k:'method',l:'طريقة التخلص',t:'sel',opts:['حرق آمن','معالجة كيميائية','معالجة حرارية','دفن آمن','إعادة تدوير','تعقيم']},{k:'disposal_site',l:'موقع التخلص'},{k:'issue_date',l:'تاريخ الإصدار',t:'date'},{k:'notes',l:'ملاحظات',t:'area'}] },
   invoices: { title: 'الفواتير والمدفوعات', r: ['manager','employee'], w: ['manager'],
     f: [{k:'number',l:'رقم الفاتورة',req:1},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'contract_id',l:'العقد',t:'ref',ref:'contracts'},{k:'amount',l:'المبلغ شامل الضريبة (ر.س)',t:'num',req:1},{k:'paid',l:'المدفوع (ر.س)',t:'num'},{k:'balance',l:'المتبقي',t:'calc'},{k:'issue_date',l:'تاريخ الإصدار',t:'date'},{k:'due_date',l:'تاريخ الاستحقاق',t:'date'},{k:'status',l:'الحالة',t:'sel',opts:['غير مدفوعة','مدفوعة جزئياً','مدفوعة']},{k:'notes',l:'ملاحظات',t:'area'}] },
+  templates: { title: 'القوالب (عروض وعقود)', r: ['manager','employee','marketer'], w: ['manager'],
+    f: [{k:'name',l:'اسم القالب',req:1},{k:'kind',l:'النوع',t:'sel',opts:['عرض سعر','عقد'],req:1},{k:'body',l:'نص القالب (استخدم {{client}} و{{date}} إلخ)',t:'area'}] },
   users: { title: 'المستخدمون', r: ['manager'], w: ['manager'], special: true,
     f: [{k:'name',l:'الاسم',req:1},{k:'username',l:'اسم الدخول',req:1},{k:'role',l:'الدور',t:'sel',opts:['manager','employee','marketer'],labels:ROLES},{k:'password',l:'كلمة المرور',t:'pass'},{k:'active',l:'نشط',t:'sel',opts:['1','0'],labels:{1:'نعم',0:'لا'}}] },
 };
@@ -61,6 +63,8 @@ CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, user_id INTEGER, action
     const have = (await D.all(`PRAGMA table_info(${n})`)).map(c => c.name);
     for (const f of d.f) if (f.t !== 'calc' && !have.includes(f.k)) await D.exec(`ALTER TABLE ${n} ADD COLUMN ${f.k} ${colType(f)}`);
   }
+  await D.exec('CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT)');
+  if (!await D.get('SELECT 1 x FROM templates')) for (const t of require('./templates.js')) await D.run('INSERT INTO templates(name,kind,body) VALUES(?,?,?)', t.name, t.kind, t.body);
   if (!await D.get('SELECT 1 x FROM users')) {
     if (process.env.NO_DEMO) { // production: only the manager account; password from ADMIN_PASSWORD (required)
       if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.length < 12) throw new Error('Set ADMIN_PASSWORD (12+ chars) when NO_DEMO=1');
@@ -82,7 +86,7 @@ const cookie = req => Object.fromEntries((req.headers.cookie||'').split(';').map
 const sessionUser = async req => { const t = cookie(req).sid; if(!t) return null;
   return await D.get("SELECT u.id,u.name,u.username,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>? AND u.active='1'", t, Date.now()) || null; };
 const attempts = {};
-const clean = (d, o) => { const out = {}; for (const f of d.f) if (f.t!=='calc' && f.t!=='pass' && o[f.k]!==undefined) out[f.k] = (colType(f)==='REAL' ? (o[f.k]===''||o[f.k]===null?null:Number(o[f.k])) : String(o[f.k]).slice(0,2000)); return out; };
+const clean = (d, o) => { const out = {}; for (const f of d.f) if (f.t!=='calc' && f.t!=='pass' && o[f.k]!==undefined) out[f.k] = (colType(f)==='REAL' ? (o[f.k]===''||o[f.k]===null?null:Number(o[f.k])) : String(o[f.k]).slice(0,f.t==='area'?30000:2000)); return out; };
 
 async function listRes(name, u) {
   const d = R[name];
@@ -147,6 +151,17 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/me') {
       const meta = {}; for (const [n,d] of Object.entries(R)) if (d.r.includes(u.role)) meta[n] = { title:d.title, f:d.f, canWrite: d.w.includes(u.role), canCreate: (d.wcreate||d.w).includes(u.role) };
       return send(res, 200, { user: u, roles: ROLES, meta });
+    }
+    if (p === '/api/settings') {
+      const KEYS = ['name_ar','name_en','tagline','tagline_en','phone','email','address','cr_no','vat_no','website','logo','footer_note'];
+      if (req.method === 'PUT') {
+        if (u.role !== 'manager') return send(res, 403, { error: 'غير مصرح' });
+        const b = await body(req);
+        for (const k of KEYS) if (b[k] !== undefined) await D.run('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v', k, String(b[k]).slice(0, k === 'logo' ? 400000 : 500));
+      }
+      const o = { name_ar: 'ريفاد', name_en: 'RIVAD', tagline: 'لإدارة النفايات الخطرة والبيئة', tagline_en: 'HAZARDOUS WASTE MANAGEMENT' };
+      for (const r of await D.all('SELECT k,v FROM settings')) o[r.k] = r.v;
+      return send(res, 200, o);
     }
     if (p === '/api/summary') { if (u.role==='marketer') return send(res,403,{error:'forbidden'}); return send(res, 200, await summary()); }
     if (p === '/api/password' && req.method==='POST') { const b = await body(req); if(String(b.password||'').length<8) return send(res,400,{error:'كلمة المرور 8 أحرف على الأقل'});
