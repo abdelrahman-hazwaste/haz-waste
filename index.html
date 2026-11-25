@@ -171,7 +171,7 @@ async function printQuote(r){const cl=(await refs('clients')).find(c=>c.id==r.cl
 const stampImg=()=>SET.stamp_on==='1'&&SET.stamp?`<br><img src="${SET.stamp}" style="height:22mm;margin:1mm 0">`:'';
 function docHtml(t){const out=[];let tb=[],tx=[];const fl=()=>{if(tx.length){out.push(tx.map(l=>l.trim()===''?'<div class="cl e"></div>':'<div class="cl">'+esc(l)+'</div>').join(''));tx=[]}if(tb.length){out.push('<table class="d" style="margin:4px 0">'+tb.map((l,i)=>'<tr>'+l.split('|').slice(1,-1).map(c=>(i?'<td>':'<th>')+esc(c.trim())+(i?'</td>':'</th>')).join('')+'</tr>').join('')+'</table>');tb=[]}};for(const l of String(t||'').split('\n')){if(l.trim().startsWith('|')){if(tx.length)fl();tb.push(l.trim())}else{if(tb.length)fl();tx.push(l)}}fl();return out.join('')}
 function LHM(inner){const S=SET;if(!S.lh_mf)return LH(inner);const o=SET;SET={...S,lh_header:S.lh_mf,lh_footer:S.lh_mf,lh_hh:30,lh_fh:16};let r;try{r=LHI(inner)}finally{SET=o}return r.replace(/<div class="hd">[\s\S]*?<\/div><div class="ft">[\s\S]*?<\/div>/,`<div style="position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:-1"><img src="${S.lh_mf}" style="width:210mm;height:297mm;display:block"></div>`)}
-function printDoc(name,r,cl){const q=name==='quotes';let t=String((q?r.body:r.contract_text)||'');if(q){openDoc(LH(docHtml(t)+(SET.stamp_on!=='1'||!SET.stamp?'':`<div style="text-align:center;margin-top:8mm;page-break-inside:avoid"><b>ختم الشركة</b>${stampImg()}</div>`)))}else openDoc(LH(contractHtml(t,cl)))}
+function printDoc(name,r,cl){const q=name==='quotes';let t=String((q?r.body:r.contract_text)||'');if(q){openDoc(LH(docHtml(t)+(SET.stamp_on!=='1'||!SET.stamp?'':`<div style="text-align:center;margin-top:8mm;page-break-inside:avoid"><b>ختم الشركة</b>${stampImg()}</div>`)))}else{const o=SET;SET={...o,lh_hh:29,lh_fh:13};let html;try{html=LH('<div style="margin:0 -5mm">'+contractHtml(t,cl)+'</div>')}finally{SET=o}openDoc(html)}}
 const waNum=p=>{p=String(p||'').replace(/\D/g,'');if(p.startsWith('00'))p=p.slice(2);else if(p.startsWith('0'))p='966'+p.slice(1);return p};
 async function refs(name){if(!CACHE[name]){try{CACHE[name]=await api(name)}catch{CACHE[name]=[]}}return CACHE[name]}
 async function table(name){const FL=FLT;FLT=null;window.__G=null;const m=META[name],rows=await api(name);CACHE[name]=rows;const lookups={};for(const f of m.f)if(f.t==='ref'){const r=await refs(f.ref);lookups[f.k]=Object.fromEntries(r.map(x=>[x.id,x.name||x.number||x.manifest]))}
@@ -237,10 +237,11 @@ const fx=(en,ar,val)=>`<div class="f"><span class="en">${en}</span><span class="
  H=(en,ar)=>`<tr><td colspan="3" class="mh"><span dir="ltr">${en}</span> &nbsp;|&nbsp; <span dir="rtl">${ar}</span></td></tr>`,
  L=(en,ar,val)=>`<tr><td colspan="3">${fx(en,ar,val)}</td></tr>`,
  P=(a,b)=>`<tr><td colspan="2">${fx(a[0],a[1],a[2])}</td><td>${fx(b[0],b[1],b[2])}</td></tr>`;
+const MF_ACCENT='#e2d6f3'; /* manifest accent color (change here) */
 const dt=k=>v(k),ysp='justify-content:space-around;display:flex;font-weight:400';
-const css=`<style>table.mf{border-collapse:collapse;width:100%;table-layout:fixed;font-size:9pt;line-height:1.2;font-family:Arial,Tahoma,sans-serif}table.mf td{border:1px solid #333;padding:1px 5px;height:5.6mm;vertical-align:middle}.mh{background:#dcebe3;font-weight:700;text-align:center;font-size:9.5pt}.f{display:flex;align-items:center;justify-content:space-between;gap:6px}.f .en{direction:ltr;white-space:nowrap}.f .ar{direction:rtl;white-space:nowrap;font-size:8.5pt}.f .vl{flex:1;text-align:center;font-weight:600;min-width:0}</style>`;
+const css=`<style>table.mf{border-collapse:collapse;width:100%;table-layout:fixed;font-size:9pt;line-height:1.2;font-family:Arial,Tahoma,sans-serif}table.mf td{border:1px solid #333;padding:1px 5px;height:5.6mm;vertical-align:middle}.mh{background:${MF_ACCENT};font-weight:700;text-align:center;font-size:9.5pt}.f{display:flex;align-items:center;justify-content:space-between;gap:6px}.f .en{direction:ltr;white-space:nowrap}.f .ar{direction:rtl;white-space:nowrap;font-size:8.5pt}.f .vl{flex:1;text-align:center;font-weight:600;min-width:0}</style>`;
 const html=css+`<div style="margin:0 0 0 -7mm"><div style="text-align:center;margin:0 0 4px"><b style="font-size:13pt">وثيقة نقل نفايات</b><br><b style="font-size:11pt;font-family:Arial">WASTE MANIFEST</b></div><table class="mf" dir="ltr"><colgroup><col style="width:28%"><col style="width:22%"><col style="width:50%"></colgroup>
-<tr><td style="background:#fff3b0">${fx('<b>Serial:</b>','<b>الرقم التسلسلي</b>',v('serial'))}</td><td colspan="2" class="mh"><span dir="ltr">GENERATOR INFORMATION</span> &nbsp;|&nbsp; <span dir="rtl">بيانات مصدر النفايات</span></td></tr>
+<tr><td style="background:${MF_ACCENT}">${fx('<b>Serial:</b>','<b>الرقم التسلسلي</b>',v('serial'))}</td><td colspan="2" class="mh"><span dir="ltr">GENERATOR INFORMATION</span> &nbsp;|&nbsp; <span dir="rtl">بيانات مصدر النفايات</span></td></tr>
 ${P(['REF:','المرجع',v('ref')],['Date:','التاريخ',dt('mdate')])}
 ${L('Generator\'s Name:','اسم مصدر النفايات',v('gen_name'))}${L('Address:','العنوان',v('gen_address'))}
 ${P(['Tel No.:','رقم الهاتف',v('gen_tel')],['Project:','المشروع',v('project')])}${L('Contract Order No.:','رقم أمر التعاقد',v('contract_order'))}
@@ -307,28 +308,28 @@ function parseContract(t){const L=String(t||'').split('\n'),B=[];let i=0,sg=0;
   if(l.startsWith('- ')){B.push({k:'n',n:String(++bn),t:l.slice(2)});continue}
   m=l.match(/^(الطرف (?:الأول|الثاني)(?: \([^)]*\))?:)\s*(.*)$/);B.push(m?{k:'p',lead:m[1],t:m[2]}:{k:'p',t:l})}
  ft();if(!sg)B.push({k:'sign'});return B}
-function contractHtml(t,cl){const e=esc,G='#0f4a37';let o='<style>.cl{font-size:12pt!important;line-height:1.38!important}</style>';
+function contractHtml(t,cl){const e=esc,G='#0f4a37';let o='<style>.cl{font-family:Arial,Tahoma,\"Noto Sans Arabic\",sans-serif!important;font-size:9.5pt!important;line-height:1.25!important}</style>';
  for(const k of parseContract(t)){
   if(k.k==='title'){o+=`<div style="text-align:center;border:1.5px solid ${G};border-radius:4px;padding:7px 10px;margin:0 0 8px;background:#f1f6f3"><div style="font-size:17pt;font-weight:700;color:${G};line-height:1.3">${e(k.L[0])}</div>${k.L.slice(1).map(x=>`<div style="font-size:11.5pt;line-height:1.3">${e(x)}</div>`).join('')}</div>`}
   else if(k.k==='info')o+=`<table class="d" style="margin:0 0 8px"><tr><th style="width:18%">رقم العقد</th><td style="width:32%">${e(k.n)}</td><th style="width:18%">التاريخ</th><td style="width:32%">${e(k.d)} م</td></tr></table>`;
-  else if(k.k==='h')o+=`<div style="font-weight:700;font-size:11.5pt;color:${G};border-bottom:1px solid #9bb8aa;margin:9px 0 3px;padding-bottom:1px;break-after:avoid;page-break-after:avoid">${e(k.t)}</div>`;
+  else if(k.k==='h')o+=`<div style="font-family:Arial,Tahoma,'Noto Sans Arabic',sans-serif;font-weight:700;font-size:10.5pt;color:${G};border-bottom:1px solid #9bb8aa;margin:8px 0 3px;padding-bottom:1px;break-after:avoid;page-break-after:avoid">${e(k.t)}</div>`;
   else if(k.k==='p')o+=`<div class="cl" style="margin:2px 0">${k.lead?`<b>${e(k.lead)}</b> `:''}${e(k.t)}</div>`;
   else if(k.k==='n')o+=`<div class="cl" style="padding-right:7mm;text-indent:-7mm;margin:1px 0">${e(k.n)}.&nbsp;${e(k.t)}</div>`;
-  else if(k.k==='c')o+=`<div class="cl" style="text-align:center;font-weight:700;margin:8px 0 2px">${e(k.t)}</div>`;
+  else if(k.k==='c')o+=`<div class="cl" style="text-align:center;font-weight:700;margin:5px 0 2px">${e(k.t)}</div>`;
   else if(k.k==='table')o+=`<table class="d" style="margin:5px 0 6px">${k.R.map((rw,i)=>'<tr>'+rw.map(c=>i?`<td style="text-align:center">${e(c)}</td>`:`<th style="background:${G};color:#fff;text-align:center">${e(c)}</th>`).join('')+'</tr>').join('')}</table>`;
-  else if(k.k==='sign'){const side=(ttl,nm)=>`<td style="width:50%;vertical-align:top;padding:0 3mm"><div style="background:${G};color:#fff;text-align:center;font-weight:700;padding:3px">${ttl}</div><div style="text-align:center;font-size:10.5pt;margin:2px 0 0">${e(nm||'')||'&nbsp;'}</div>${['الاسم','الصفة','التوقيع'].map(x=>`<div style="margin-top:7mm;border-bottom:1px solid #666;height:6mm;font-size:11pt">${x}:</div>`).join('')}</td>`;
-   o+=`<div style="text-align:center;font-weight:700;font-size:12.5pt;color:${G};margin:10px 0 4px">التوقيع</div><table style="width:100%;border-collapse:collapse;page-break-inside:avoid"><tr>${side('الطرف الأول',SET.name_ar)}${side('الطرف الثاني',cl)}</tr></table>`}}
+  else if(k.k==='sign'){const side=(ttl,nm)=>`<td style="width:50%;vertical-align:top;padding:0 3mm"><div style="background:${G};color:#fff;text-align:center;font-weight:700;padding:3px">${ttl}</div><div style="text-align:center;font-size:10.5pt;margin:2px 0 0">${e(nm||'')||'&nbsp;'}</div>${['الاسم','الصفة','التوقيع'].map(x=>`<div style="margin-top:4.5mm;border-bottom:1px solid #666;height:5mm;font-size:10pt">${x}:</div>`).join('')}</td>`;
+   o+=`<div style="text-align:center;font-weight:700;font-size:11.5pt;color:${G};margin:6px 0 3px">التوقيع</div><table style="width:100%;border-collapse:collapse;page-break-inside:avoid"><tr>${side('الطرف الأول',SET.name_ar)}${side('الطرف الثاني',cl)}</tr></table>`}}
  return o}
 function contractDocx(t,cl){const G='0F4A37';let o='';
  for(const k of parseContract(t)){
   if(k.k==='title'){o+=para(k.L[0],{jc:'center',sz:34,b:1,col:G,after:40});k.L.slice(1).forEach(x=>o+=para(x,{jc:'center',sz:28,after:40}));o+=para('',{after:60})}
-  else if(k.k==='info'){const w=[1800,3019,1800,3019];o+=tbl([trow(['رقم العقد',k.n,'التاريخ',k.d+' م'],w,{sz:24})],w)+para('',{after:60})}
-  else if(k.k==='h')o+=para(k.t,{b:1,sz:25,col:G,before:180,after:50});
-  else if(k.k==='p')o+=para('',{raw:(k.lead?run(k.lead+' ',{b:1,sz:24}):'')+run(k.t,{sz:24}),line:300});
-  else if(k.k==='n')o+=para(k.n+'. '+k.t,{sz:24,line:300});
-  else if(k.k==='c')o+=para(k.t,{jc:'center',b:1,sz:24,before:120});
-  else if(k.k==='table'){const n=k.R[0].length,w=Array(n).fill(Math.floor(9638/n));o+=tbl(k.R.map((rw,i)=>trow(rw,w,{b:i===0,fill:i===0?G:'',col:i===0?'FFFFFF':'',sz:24})),w)+para('',{after:80})}
-  else if(k.k==='sign'){const w=[4819,4819],sd=(a,b)=>para(a,{jc:'center',b:1,sz:26,col:'FFFFFF'}),ln=x=>para(x+': ................................',{sz:24,before:200,jc:'both'}),cell=(ttl,nm)=>para(nm||'',{jc:'center',sz:24})+ln('الاسم')+ln('الصفة')+ln('التوقيع');
+  else if(k.k==='info'){const w=[1800,3019,1800,3019];o+=tbl([trow(['رقم العقد',k.n,'التاريخ',k.d+' م'],w,{sz:21})],w)+para('',{after:60})}
+  else if(k.k==='h')o+=para(k.t,{b:1,sz:23,col:G,before:180,after:50});
+  else if(k.k==='p')o+=para('',{raw:(k.lead?run(k.lead+' ',{b:1,sz:21}):'')+run(k.t,{sz:21}),line:276});
+  else if(k.k==='n')o+=para(k.n+'. '+k.t,{sz:21,line:276});
+  else if(k.k==='c')o+=para(k.t,{jc:'center',b:1,sz:21,before:120});
+  else if(k.k==='table'){const n=k.R[0].length,w=Array(n).fill(Math.floor(9638/n));o+=tbl(k.R.map((rw,i)=>trow(rw,w,{b:i===0,fill:i===0?G:'',col:i===0?'FFFFFF':'',sz:21})),w)+para('',{after:80})}
+  else if(k.k==='sign'){const w=[4819,4819],sd=(a,b)=>para(a,{jc:'center',b:1,sz:26,col:'FFFFFF'}),ln=x=>para(x+': ................................',{sz:21,before:200,jc:'both'}),cell=(ttl,nm)=>para(nm||'',{jc:'center',sz:21})+ln('الاسم')+ln('الصفة')+ln('التوقيع');
    o+=para('التوقيع',{jc:'center',b:1,sz:25,col:G,before:200,after:60})+tbl([trow(['الطرف الأول','الطرف الثاني'],w,{b:1,fill:G,col:'FFFFFF',sz:26}),trow([cell('',SET.name_ar),cell('',cl&&cl.name)],w,{})],w)}}
  return o}
 async function buildDocx(kind,r){const cl=(await refs('clients')).find(c=>c.id==r.client_id)||{};let body='',st=await stampPara();
