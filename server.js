@@ -64,6 +64,7 @@ async function addUser(name, username, role, pw) {
 async function initDb() {
   await D.exec(`CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, name TEXT, username TEXT UNIQUE, role TEXT, salt TEXT, hash TEXT, active TEXT DEFAULT '1', created_by INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY, user_id INTEGER, expires INTEGER);
+CREATE TABLE IF NOT EXISTS trash(id INTEGER PRIMARY KEY, tbl TEXT, rec_id INTEGER, label TEXT, data TEXT, by_user INTEGER, at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, user_id INTEGER, action TEXT, res TEXT, rec INTEGER, at TEXT DEFAULT CURRENT_TIMESTAMP)`);
   for (const [n, d] of Object.entries(R)) if (n !== 'users')
     await D.exec(`CREATE TABLE IF NOT EXISTS ${n}(id INTEGER PRIMARY KEY, ${d.f.filter(f=>f.t!=='calc').map(f=>f.k+' '+colType(f)).join(',')}, created_by INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP)`);
@@ -198,6 +199,24 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/summary') { if (u.role==='marketer') return send(res,403,{error:'forbidden'}); return send(res, 200, await summary()); }
     if (p === '/api/password' && req.method==='POST') { const b = await body(req); if(String(b.password||'').length<8) return send(res,400,{error:'كلمة المرور 8 أحرف على الأقل'});
       const salt = crypto.randomBytes(16).toString('hex'); await D.run('UPDATE users SET salt=?,hash=? WHERE id=?', salt, hashPw(b.password, salt), u.id); return send(res,200,{ok:1}); }
+    if (p === '/api/trash' || /^\/api\/trash\/\d+(\/restore)?$/.test(p)) {
+      if (u.role !== 'manager') return send(res, 403, { error: 'للمدير فقط' });
+      const tm = p.match(/^\/api\/trash\/(\d+)(\/restore)?$/);
+      if (!tm) return send(res, 200, await D.all('SELECT id,tbl,rec_id,label,at FROM trash ORDER BY id DESC LIMIT 500'));
+      const tr = await D.get('SELECT * FROM trash WHERE id=?', Number(tm[1])); if (!tr) return send(res, 404, { error: 'غير موجود' });
+      if (tm[2] && req.method === 'POST') {
+        if (!R[tr.tbl] || tr.tbl === 'users') return send(res, 400, { error: 'غير مدعوم' });
+        const row = JSON.parse(tr.data); const cols = (await D.all(`PRAGMA table_info(${tr.tbl})`)).map(c => c.name);
+        if (await D.get(`SELECT 1 FROM ${tr.tbl} WHERE id=?`, row.id)) delete row.id;
+        const ks = Object.keys(row).filter(k => cols.includes(k));
+        const ins = await D.run(`INSERT INTO ${tr.tbl}(${ks.join(',')}) VALUES(${ks.map(() => '?').join(',')})`, ...ks.map(k => row[k]));
+        await D.run('DELETE FROM trash WHERE id=?', tr.id);
+        await D.run('INSERT INTO audit(user_id,action,res,rec) VALUES(?,?,?,?)', u.id, 'restore', tr.tbl, Number(ins.lastInsertRowid || row.id));
+        return send(res, 200, { ok: 1 });
+      }
+      if (!tm[2] && req.method === 'DELETE') { await D.run('DELETE FROM trash WHERE id=?', tr.id); return send(res, 200, { ok: 1 }); }
+      return send(res, 405, { error: 'غير مدعوم' });
+    }
     const m = p.match(/^\/api\/(\w+)(?:\/(\d+))?$/);
     if (m && R[m[1]]) {
       const name = m[1], d = R[name], id = m[2] && Number(m[2]);
@@ -228,7 +247,10 @@ const server = http.createServer(async (req, res) => {
         if (req.method === 'DELETE') {
           if (name==='users') { if (id===u.id) return send(res,400,{error:'لا يمكن حذف حسابك'}); await D.run("UPDATE users SET active='0' WHERE id=?", id); }
           else if (u.role!=='manager') return send(res,403,{error:'الحذف للمدير فقط'});
-          else await D.run(`DELETE FROM ${name} WHERE id=?`, id);
+          else { const row = await D.get(`SELECT * FROM ${name} WHERE id=?`, id);
+            if (row) { const lk = ['name','number','serial','ref','fac_name','title','plate','description','desc','invoice_no']; const lb = String(lk.map(k=>row[k]).find(v=>v) || Object.values(row).find(v=>typeof v==='string'&&v) || id).slice(0,80);
+              await D.run('INSERT INTO trash(tbl,rec_id,label,data,by_user) VALUES(?,?,?,?,?)', name, id, lb, JSON.stringify(row), u.id); }
+            await D.run(`DELETE FROM ${name} WHERE id=?`, id); }
           await D.run('INSERT INTO audit(user_id,action,res,rec) VALUES(?,?,?,?)', u.id,'delete',name,id); return send(res,200,{ok:1});
         }
         const b = await body(req);
