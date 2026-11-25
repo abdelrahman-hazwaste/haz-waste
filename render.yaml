@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: haz-waste
+    runtime: node
+    plan: free
+    buildCommand: "echo no build"
+    startCommand: node server.js
+    envVars:
+      - {key: NODE_VERSION, value: "22"}
+      - {key: NO_DEMO, value: "1"}
+      - {key: HTTPS, value: "1"}
+      - {key: TURSO_URL, sync: false}
+      - {key: TURSO_TOKEN, sync: false}
+      - {key: ADMIN_PASSWORD, sync: false}
