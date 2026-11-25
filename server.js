@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, user_id INTEGER, action
   await D.exec('CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT)');
   { const T = require('./templates.js'); const q = T.find(t => t.kind === 'عرض سعر'); await D.run("UPDATE templates SET name=?, body=? WHERE name='نموذج عرض السعر الثابت'", q.name, q.body);  const M = T.find(t => t.name.includes('على نموذج العميل')); await D.run('UPDATE templates SET body=? WHERE name=?', M.body, M.name); }
   if (!await D.get("SELECT 1 x FROM settings WHERE k='lh_header'")) { const L = require('./letterhead.js'); for (const [k, v] of [['lh_header', L.header], ['lh_footer', L.footer], ['lh_hh', String(L.hh)], ['lh_fh', String(L.fh)]]) await D.run('INSERT INTO settings(k,v) VALUES(?,?)', k, v); }
+  if (process.env.STAMP_B64 && !await D.get("SELECT 1 x FROM settings WHERE k='stamp'")) { await D.run("INSERT INTO settings(k,v) VALUES('stamp',?)", process.env.STAMP_B64); await D.run("INSERT INTO settings(k,v) VALUES('stamp_on','1') ON CONFLICT(k) DO NOTHING"); }
   if (!await D.get('SELECT 1 x FROM templates')) for (const t of require('./templates.js')) await D.run('INSERT INTO templates(name,kind,body) VALUES(?,?,?)', t.name, t.kind, t.body);
   for (const t of require('./templates.js').filter(t => t.name.includes('على نموذج العميل'))) if (!await D.get('SELECT 1 x FROM templates WHERE name=?', t.name)) await D.run('INSERT INTO templates(name,kind,body) VALUES(?,?,?)', t.name, t.kind, t.body);
   if (!await D.get('SELECT 1 x FROM users')) {
@@ -156,11 +157,11 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { user: u, roles: ROLES, meta });
     }
     if (p === '/api/settings') {
-      const KEYS = ['name_ar','name_en','tagline','tagline_en','phone','email','address','cr_no','vat_no','website','logo','footer_note','lh_header','lh_footer','lh_hh','lh_fh','short_addr'];
+      const KEYS = ['name_ar','name_en','tagline','tagline_en','phone','email','address','cr_no','vat_no','website','logo','footer_note','lh_header','lh_footer','lh_hh','lh_fh','short_addr','stamp','stamp_on'];
       if (req.method === 'PUT') {
         if (u.role !== 'manager') return send(res, 403, { error: 'غير مصرح' });
         const b = await body(req);
-        for (const k of KEYS) if (b[k] !== undefined) await D.run('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v', k, String(b[k]).slice(0, ['logo','lh_header','lh_footer'].includes(k) ? 600000 : 500));
+        for (const k of KEYS) if (b[k] !== undefined) await D.run('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v', k, String(b[k]).slice(0, ['logo','lh_header','lh_footer','stamp'].includes(k) ? 600000 : 500));
       }
       const o = { name_ar: 'شركة ريفاد إنفايرونمنتال سيرفيسز', name_en: 'RIFAD Environmental Services Company', tagline: '', tagline_en: '', phone: '050 660 0760', email: 'info@rifades.sa', address: 'الليث، حي رقم 1، شارع وهب الخير، مبنى 8109، الرمز البريدي 28429', short_addr: 'JTDA8109', cr_no: '7055365444' };
       for (const r of await D.all('SELECT k,v FROM settings')) o[r.k] = r.v;
