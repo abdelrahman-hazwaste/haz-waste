@@ -108,14 +108,15 @@ async function printQuote(r){const cl=(await refs('clients')).find(c=>c.id==r.cl
  const dt=(r.created_at||'').slice(0,10)||new Date().toISOString().slice(0,10);
  openDoc(LH(`<h2 style="text-align:center;font-size:22px;margin-bottom:10px">عرض سعر</h2>
 <table class="meta"><tr><td><b>رقم العرض:</b> ${esc(r.number||'')}</td><td><b>التاريخ:</b> ${esc(dt)}</td><td><b>صالح حتى:</b> ${esc(r.valid_until||'')}</td></tr></table>
-<p style="font-size:11px;color:#444;margin:0 0 6px;text-align:center">${[SET.cr_no&&'السجل التجاري / الرقم الموحد: '+esc(SET.cr_no),SET.vat_no&&'الرقم المميز: '+esc(SET.vat_no),(SET.short_addr||SET.address)&&'العنوان الوطني: '+esc([SET.short_addr,SET.address].filter(Boolean).join(' - '))].filter(Boolean).join(' &nbsp;|&nbsp; ')}</p>
+<p style="font-size:11px;color:#444;margin:0 0 6px;text-align:center">${[SET.cr_no&&'السجل التجاري / الرقم الموحد: '+esc(SET.cr_no),(SET.short_addr||SET.address)&&'العنوان الوطني: '+esc([SET.short_addr,SET.address].filter(Boolean).join(' - '))].filter(Boolean).join(' &nbsp;|&nbsp; ')}</p>
 <p style="margin:8px 0 2px"><b>السادة / ${esc(cl.name||'')}</b> المحترمين${cl.contact?`<br>عناية: ${esc(cl.contact)}`:''}${cl.phone?` &nbsp; جوال: ${esc(cl.phone)}`:''}</p>
 <p style="margin:2px 0 8px">تحية طيبة وبعد، يسرنا تقديم عرض السعر التالي لخدمات الجمع والنقل والتخلص الآمن من المخلفات الخطرة:</p>
 <table class="q"><tr><th style="width:6%">م</th><th style="width:17%">البند</th><th>الوصف</th><th style="width:9%">الوحدة</th><th style="width:9%">الكمية</th><th style="width:13%">سعر الوحدة</th><th style="width:14%">الإجمالي (ر.س)</th></tr>${rows}</table>
 <table class="tot"><tr><td>المجموع قبل الضريبة</td><td>${fm(sub)}</td></tr><tr><td>ضريبة القيمة المضافة 15%</td><td>${fm(vat)}</td></tr><tr><td>الإجمالي شامل الضريبة (ر.س)</td><td>${fm(sub+vat)}</td></tr></table>
 <div style="margin-top:10px"><pre>${esc(r.body||'')}</pre></div>
 <div class="sig"><div>${esc(SET.name_ar||'')}<br>الاسم والتوقيع والختم</div><div>اعتماد العميل<br>الاسم والتوقيع والختم</div></div>`))}
-function printDoc(name,r,cl){const q=name==='quotes';openDoc(LH(`<pre>${esc((q?r.body:r.contract_text)||'')}</pre>`))}
+function docHtml(t){const out=[];let tb=[],tx=[];const fl=()=>{if(tx.length){out.push('<pre>'+esc(tx.join('\n'))+'</pre>');tx=[]}if(tb.length){out.push('<table class="d" style="margin:6px 0">'+tb.map((l,i)=>'<tr>'+l.split('|').slice(1,-1).map(c=>(i?'<td>':'<th>')+esc(c.trim())+(i?'</td>':'</th>')).join('')+'</tr>').join('')+'</table>');tb=[]}};for(const l of String(t||'').split('\n')){if(l.trim().startsWith('|')){if(tx.length)fl();tb.push(l.trim())}else{if(tb.length)fl();tx.push(l)}}fl();return out.join('')}
+function printDoc(name,r,cl){const q=name==='quotes';openDoc(LH(docHtml(q?r.body:r.contract_text)))}
 const waNum=p=>{p=String(p||'').replace(/\D/g,'');if(p.startsWith('00'))p=p.slice(2);else if(p.startsWith('0'))p='966'+p.slice(1);return p};
 async function refs(name){if(!CACHE[name])CACHE[name]=await api(name);return CACHE[name]}
 async function table(name){const m=META[name],rows=await api(name);CACHE[name]=rows;const lookups={};for(const f of m.f)if(f.t==='ref'){const r=await refs(f.ref);lookups[f.k]=Object.fromEntries(r.map(x=>[x.id,x.name||x.number||x.manifest]))}
