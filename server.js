@@ -27,7 +27,7 @@ const R = {
   clients: { title: 'العملاء', r: ['manager','employee','marketer'], w: ['manager','marketer'], own: ['marketer'],
     f: [{k:'name',l:'اسم المنشأة',req:1},{k:'sector',l:'القطاع',t:'sel',opts:['مستشفى','مصنع','مختبر','محطة وقود','أخرى']},{k:'contact',l:'مسؤول التواصل'},{k:'phone',l:'رقم الجوال'},{k:'whatsapp',l:'رقم واتساب (إن اختلف)'},{k:'email',l:'البريد الإلكتروني'},{k:'contact_pref',l:'طريقة التواصل المفضلة',t:'sel',opts:['اتصال هاتفي','واتساب','رسالة نصية','بريد إلكتروني']},{k:'city',l:'المدينة'},{k:'address',l:'العنوان'},{k:'tax_no',l:'الرقم الضريبي / السجل التجاري'},{k:'status',l:'الحالة',t:'sel',opts:['محتمل','نشط','موقوف']},{k:'notes',l:'ملاحظات عن العميل',t:'area'}] },
   quotes: { title: 'عروض الأسعار', r: ['manager','marketer'], w: ['manager','marketer'], own: ['marketer'],
-    f: [{k:'number',l:'رقم العرض'},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'waste_type',l:'نوع المخلفات',t:'sel',opts:['طبية معدية','كيميائية','زيوت مستعملة','بطاريات','مخلفات صناعية','حادة']},{k:'qty',l:'الكمية المتوقعة (كجم)',t:'num'},{k:'unit_price',l:'سعر الكجم (ر.س)',t:'num'},{k:'total',l:'الإجمالي شامل ضريبة 15%',t:'calc'},{k:'valid_until',l:'صالح حتى',t:'date'},{k:'status',l:'الحالة',t:'sel',opts:['مسودة','مُرسل','مقبول','مرفوض']},{k:'body',l:'نص العرض والشروط',t:'area'}] },
+    f: [{k:'number',l:'رقم العرض'},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'waste_type',l:'نوع المخلفات',t:'sel',opts:['طبية معدية','كيميائية','زيوت مستعملة','بطاريات','مخلفات صناعية','حادة']},{k:'qty',l:'الكمية المتوقعة (كجم)',t:'num'},{k:'unit_price',l:'سعر الكجم (ر.س)',t:'num'},{k:'total',l:'الإجمالي شامل ضريبة 15%',t:'calc'},{k:'valid_until',l:'صالح حتى',t:'date'},{k:'status',l:'الحالة',t:'sel',opts:['مسودة','مُرسل','مقبول','مرفوض']},{k:'body',l:'الشروط والملاحظات',t:'area'},{k:'items',l:'بنود العرض',t:'area'}] },
   contracts: { title: 'العقود', r: ['manager','employee','marketer'], w: ['manager','marketer'], own: ['marketer'],
     f: [{k:'number',l:'رقم العقد',req:1},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'scope',l:'نطاق الخدمة',t:'sel',opts:['جمع','جمع ونقل','جمع ونقل وتخلص']},{k:'start_date',l:'البداية',t:'date'},{k:'end_date',l:'النهاية',t:'date'},{k:'value',l:'قيمة العقد (ر.س)',t:'num'},{k:'status',l:'الحالة',t:'sel',opts:['ساري','منتهي','موقوف']},{k:'notes',l:'ملاحظات داخلية',t:'area'},{k:'contract_text',l:'نص العقد الكامل',t:'area'}] },
   jobs: { title: 'العمليات (جمع ونقل وتخلص)', r: ['manager','employee'], w: ['manager','employee'],
@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, user_id INTEGER, action
     for (const f of d.f) if (f.t !== 'calc' && !have.includes(f.k)) await D.exec(`ALTER TABLE ${n} ADD COLUMN ${f.k} ${colType(f)}`);
   }
   await D.exec('CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT)');
+  { const T = require('./templates.js'); const q = T.find(t => t.kind === 'عرض سعر'); await D.run("UPDATE templates SET name=?, body=? WHERE name='نموذج عرض السعر الثابت'", q.name, q.body); }
+  if (!await D.get("SELECT 1 x FROM settings WHERE k='lh_header'")) { const L = require('./letterhead.js'); for (const [k, v] of [['lh_header', L.header], ['lh_footer', L.footer], ['lh_hh', String(L.hh)], ['lh_fh', String(L.fh)]]) await D.run('INSERT INTO settings(k,v) VALUES(?,?)', k, v); }
   if (!await D.get('SELECT 1 x FROM templates')) for (const t of require('./templates.js')) await D.run('INSERT INTO templates(name,kind,body) VALUES(?,?,?)', t.name, t.kind, t.body);
   if (!await D.get('SELECT 1 x FROM users')) {
     if (process.env.NO_DEMO) { // production: only the manager account; password from ADMIN_PASSWORD (required)
@@ -95,7 +97,7 @@ async function listRes(name, u) {
   else if (d.own?.includes(u.role)) rows = await D.all(`SELECT * FROM ${name} WHERE created_by=? ORDER BY id DESC`, u.id);
   else rows = await D.all(`SELECT * FROM ${name} ORDER BY id DESC`);
   if (name==='invoices') rows.forEach(q=>q.balance=Math.round(((q.amount||0)-(q.paid||0))*100)/100);
-  if (name==='quotes') rows.forEach(q=>q.total=Math.round((q.qty||0)*(q.unit_price||0)*1.15*100)/100);
+  if (name==='quotes') rows.forEach(q=>{ let sub=(q.qty||0)*(q.unit_price||0); try { const it=JSON.parse(q.items||'[]'); if (it.length) sub=it.reduce((a,x)=>a+(Number(x.q)||0)*(Number(x.p)||0),0); } catch {} q.total=Math.round(sub*1.15*100)/100; });
   return rows;
 }
 async function summary() {
@@ -153,13 +155,13 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { user: u, roles: ROLES, meta });
     }
     if (p === '/api/settings') {
-      const KEYS = ['name_ar','name_en','tagline','tagline_en','phone','email','address','cr_no','vat_no','website','logo','footer_note'];
+      const KEYS = ['name_ar','name_en','tagline','tagline_en','phone','email','address','cr_no','vat_no','website','logo','footer_note','lh_header','lh_footer','lh_hh','lh_fh'];
       if (req.method === 'PUT') {
         if (u.role !== 'manager') return send(res, 403, { error: 'غير مصرح' });
         const b = await body(req);
-        for (const k of KEYS) if (b[k] !== undefined) await D.run('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v', k, String(b[k]).slice(0, k === 'logo' ? 400000 : 500));
+        for (const k of KEYS) if (b[k] !== undefined) await D.run('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v', k, String(b[k]).slice(0, ['logo','lh_header','lh_footer'].includes(k) ? 600000 : 500));
       }
-      const o = { name_ar: 'ريفاد', name_en: 'RIVAD', tagline: 'لإدارة النفايات الخطرة والبيئة', tagline_en: 'HAZARDOUS WASTE MANAGEMENT' };
+      const o = { name_ar: 'ريفاد للخدمات البيئية', name_en: 'RIFAD Environmental Services', tagline: '', tagline_en: '', phone: '050 660 0760', email: 'info@rifades.sa', address: 'Jeddah, Saudi Arabia' };
       for (const r of await D.all('SELECT k,v FROM settings')) o[r.k] = r.v;
       return send(res, 200, o);
     }
