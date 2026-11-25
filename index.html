@@ -237,11 +237,11 @@ const fx=(en,ar,val)=>`<div class="f"><span class="en">${en}</span><span class="
  H=(en,ar)=>`<tr><td colspan="3" class="mh"><span dir="ltr">${en}</span> &nbsp;|&nbsp; <span dir="rtl">${ar}</span></td></tr>`,
  L=(en,ar,val)=>`<tr><td colspan="3">${fx(en,ar,val)}</td></tr>`,
  P=(a,b)=>`<tr><td colspan="2">${fx(a[0],a[1],a[2])}</td><td>${fx(b[0],b[1],b[2])}</td></tr>`;
-const MF_ACCENT='#e2d6f3'; /* manifest accent color (change here) */
+const MF_BG='#dcebe3',MF_SER='#fff3b0',MF_TXT='#0f766e'; /* manifest header bg, serial bg, header text color (change here) */
 const dt=k=>v(k),ysp='justify-content:space-around;display:flex;font-weight:400';
-const css=`<style>table.mf{border-collapse:collapse;width:100%;table-layout:fixed;font-size:9pt;line-height:1.2;font-family:Arial,Tahoma,sans-serif}table.mf td{border:1px solid #333;padding:1px 5px;height:5.6mm;vertical-align:middle}.mh{background:${MF_ACCENT};font-weight:700;text-align:center;font-size:9.5pt}.f{display:flex;align-items:center;justify-content:space-between;gap:6px}.f .en{direction:ltr;white-space:nowrap}.f .ar{direction:rtl;white-space:nowrap;font-size:8.5pt}.f .vl{flex:1;text-align:center;font-weight:600;min-width:0}</style>`;
+const css=`<style>table.mf{border-collapse:collapse;width:100%;table-layout:fixed;font-size:9pt;line-height:1.2;font-family:Arial,Tahoma,sans-serif}table.mf td{border:1px solid #333;padding:1px 5px;height:5.6mm;vertical-align:middle}.mh{background:${MF_BG};color:${MF_TXT};font-weight:700;text-align:center;font-size:9.5pt}.f{display:flex;align-items:center;justify-content:space-between;gap:6px}.f .en{direction:ltr;white-space:nowrap}.f .ar{direction:rtl;white-space:nowrap;font-size:8.5pt}.f .vl{flex:1;text-align:center;font-weight:600;min-width:0}</style>`;
 const html=css+`<div style="margin:0 0 0 -7mm"><div style="text-align:center;margin:0 0 4px"><b style="font-size:13pt">وثيقة نقل نفايات</b><br><b style="font-size:11pt;font-family:Arial">WASTE MANIFEST</b></div><table class="mf" dir="ltr"><colgroup><col style="width:28%"><col style="width:22%"><col style="width:50%"></colgroup>
-<tr><td style="background:${MF_ACCENT}">${fx('<b>Serial:</b>','<b>الرقم التسلسلي</b>',v('serial'))}</td><td colspan="2" class="mh"><span dir="ltr">GENERATOR INFORMATION</span> &nbsp;|&nbsp; <span dir="rtl">بيانات مصدر النفايات</span></td></tr>
+<tr><td style="background:${MF_SER};color:${MF_TXT}">${fx('<b>Serial:</b>','<b>الرقم التسلسلي</b>',v('serial'))}</td><td colspan="2" class="mh"><span dir="ltr">GENERATOR INFORMATION</span> &nbsp;|&nbsp; <span dir="rtl">بيانات مصدر النفايات</span></td></tr>
 ${P(['REF:','المرجع',v('ref')],['Date:','التاريخ',dt('mdate')])}
 ${L('Generator\'s Name:','اسم مصدر النفايات',v('gen_name'))}${L('Address:','العنوان',v('gen_address'))}
 ${P(['Tel No.:','رقم الهاتف',v('gen_tel')],['Project:','المشروع',v('project')])}${L('Contract Order No.:','رقم أمر التعاقد',v('contract_order'))}
