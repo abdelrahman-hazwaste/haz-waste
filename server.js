@@ -31,9 +31,17 @@ const R = {
   contracts: { title: 'العقود', r: ['manager','employee','marketer'], w: ['manager','marketer'], own: ['marketer'],
     f: [{k:'number',l:'رقم العقد',req:1},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'scope',l:'نطاق الخدمة',t:'sel',opts:['جمع','جمع ونقل','جمع ونقل وتخلص']},{k:'start_date',l:'البداية',t:'date'},{k:'end_date',l:'النهاية',t:'date'},{k:'value',l:'قيمة العقد (ر.س)',t:'num'},{k:'status',l:'الحالة',t:'sel',opts:['ساري','منتهي','موقوف']},{k:'notes',l:'ملاحظات داخلية',t:'area'},{k:'contract_text',l:'نص العقد الكامل',t:'area'}] },
   jobs: { title: 'العمليات (جمع ونقل وتخلص)', r: ['manager','employee'], w: ['manager','employee'],
-    f: [{k:'manifest',l:'رقم بيان النقل',req:1},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'contract_id',l:'العقد',t:'ref',ref:'contracts'},{k:'waste_type',l:'نوع المخلفات',t:'sel',opts:['طبية معدية','كيميائية','زيوت مستعملة','بطاريات','مخلفات صناعية','حادة']},{k:'qty',l:'الكمية (كجم)',t:'num'},{k:'job_date',l:'تاريخ الجمع',t:'date'},{k:'vehicle',l:'المركبة'},{k:'driver_id',l:'السائق/الموظف',t:'ref',ref:'users'},{k:'disposal_site',l:'موقع التخلص'},{k:'status',l:'المرحلة',t:'sel',opts:['مجدولة','تم الجمع','في النقل','تم التخلص']}] },
+    f: [{k:'manifest',l:'رقم بيان النقل',req:1},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'contract_id',l:'العقد',t:'ref',ref:'contracts'},{k:'waste_type',l:'نوع المخلفات',t:'sel',opts:['طبية معدية','كيميائية','زيوت مستعملة','بطاريات','مخلفات صناعية','حادة']},{k:'hazard_class',l:'فئة الخطورة',t:'sel',opts:['1 - متفجرات','2 - غازات','3 - سوائل قابلة للاشتعال','4 - مواد صلبة قابلة للاشتعال','5 - مؤكسدات','6 - سامة ومعدية','8 - أكالة','9 - متنوعة','غير مصنفة']},{k:'containers',l:'عدد الحاويات / العبوات',t:'num'},{k:'qty',l:'الكمية (كجم)',t:'num'},{k:'pickup_address',l:'موقع الجمع'},{k:'job_date',l:'تاريخ الجمع',t:'date'},{k:'vehicle_id',l:'المركبة',t:'ref',ref:'vehicles'},{k:'vehicle',l:'المركبة (نص حر)'},{k:'driver_id',l:'السائق/الموظف',t:'ref',ref:'users'},{k:'disposal_site',l:'موقع التخلص'},{k:'status',l:'المرحلة',t:'sel',opts:['مجدولة','تم الجمع','في النقل','تم التخلص']},{k:'notes',l:'ملاحظات',t:'area'}] },
   transactions: { title: 'الإيرادات والمصروفات', r: ['manager','employee'], w: ['manager'], wcreate: ['manager','employee'],
     f: [{k:'kind',l:'النوع',t:'sel',opts:['إيراد','مصروف'],req:1},{k:'category',l:'البند',t:'sel',opts:['خدمات جمع ونقل','خدمات تخلص','وقود','رواتب','صيانة مركبات','رسوم تخلص','تراخيص','تسويق','أخرى']},{k:'amount',l:'المبلغ (ر.س)',t:'num',req:1},{k:'tx_date',l:'التاريخ',t:'date'},{k:'client_id',l:'العميل (للإيراد)',t:'ref',ref:'clients'},{k:'note',l:'ملاحظات'}] },
+  vehicles: { title: 'المركبات والسائقون', r: ['manager','employee'], w: ['manager','employee'],
+    f: [{k:'name',l:'رقم اللوحة / اسم المركبة',req:1},{k:'vtype',l:'النوع',t:'sel',opts:['شاحنة نقل مخلفات خطرة','صهريج','وانيت','أخرى']},{k:'capacity',l:'الحمولة (كجم)',t:'num'},{k:'driver',l:'السائق المعتمد'},{k:'driver_phone',l:'جوال السائق'},{k:'registration_expiry',l:'انتهاء الاستمارة',t:'date'},{k:'insurance_expiry',l:'انتهاء التأمين',t:'date'},{k:'permit_expiry',l:'انتهاء تصريح نقل المخلفات',t:'date'},{k:'status',l:'الحالة',t:'sel',opts:['متاحة','في مهمة','صيانة']}] },
+  licenses: { title: 'التراخيص والتصاريح', r: ['manager','employee'], w: ['manager','employee'],
+    f: [{k:'name',l:'اسم الترخيص',req:1},{k:'kind',l:'النوع',t:'sel',opts:['ترخيص بيئي','رخصة نقل مخلفات خطرة','سجل تجاري','رخصة بلدية','دفاع مدني','رخصة سائق','تأمين','أخرى']},{k:'number',l:'الرقم'},{k:'issuer',l:'الجهة المصدرة'},{k:'holder',l:'الخاص بـ (شركة / سائق / مركبة)'},{k:'issue_date',l:'تاريخ الإصدار',t:'date'},{k:'expiry_date',l:'تاريخ الانتهاء',t:'date',req:1},{k:'notes',l:'ملاحظات',t:'area'}] },
+  certificates: { title: 'شهادات التخلص', r: ['manager','employee'], w: ['manager','employee'],
+    f: [{k:'number',l:'رقم الشهادة',req:1},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'job_id',l:'العملية (بيان النقل)',t:'ref',ref:'jobs'},{k:'waste_type',l:'نوع المخلفات'},{k:'qty',l:'الكمية (كجم)',t:'num'},{k:'method',l:'طريقة التخلص',t:'sel',opts:['حرق آمن','معالجة كيميائية','معالجة حرارية','دفن آمن','إعادة تدوير','تعقيم']},{k:'disposal_site',l:'موقع التخلص'},{k:'issue_date',l:'تاريخ الإصدار',t:'date'},{k:'notes',l:'ملاحظات',t:'area'}] },
+  invoices: { title: 'الفواتير والمدفوعات', r: ['manager','employee'], w: ['manager'],
+    f: [{k:'number',l:'رقم الفاتورة',req:1},{k:'client_id',l:'العميل',t:'ref',ref:'clients',req:1},{k:'contract_id',l:'العقد',t:'ref',ref:'contracts'},{k:'amount',l:'المبلغ شامل الضريبة (ر.س)',t:'num',req:1},{k:'paid',l:'المدفوع (ر.س)',t:'num'},{k:'balance',l:'المتبقي',t:'calc'},{k:'issue_date',l:'تاريخ الإصدار',t:'date'},{k:'due_date',l:'تاريخ الاستحقاق',t:'date'},{k:'status',l:'الحالة',t:'sel',opts:['غير مدفوعة','مدفوعة جزئياً','مدفوعة']},{k:'notes',l:'ملاحظات',t:'area'}] },
   users: { title: 'المستخدمون', r: ['manager'], w: ['manager'], special: true,
     f: [{k:'name',l:'الاسم',req:1},{k:'username',l:'اسم الدخول',req:1},{k:'role',l:'الدور',t:'sel',opts:['manager','employee','marketer'],labels:ROLES},{k:'password',l:'كلمة المرور',t:'pass'},{k:'active',l:'نشط',t:'sel',opts:['1','0'],labels:{1:'نعم',0:'لا'}}] },
 };
@@ -82,6 +90,7 @@ async function listRes(name, u) {
   if (name === 'users') rows = await D.all('SELECT id,name,username,role,active FROM users');
   else if (d.own?.includes(u.role)) rows = await D.all(`SELECT * FROM ${name} WHERE created_by=? ORDER BY id DESC`, u.id);
   else rows = await D.all(`SELECT * FROM ${name} ORDER BY id DESC`);
+  if (name==='invoices') rows.forEach(q=>q.balance=Math.round(((q.amount||0)-(q.paid||0))*100)/100);
   if (name==='quotes') rows.forEach(q=>q.total=Math.round((q.qty||0)*(q.unit_price||0)*1.15*100)/100);
   return rows;
 }
@@ -94,6 +103,15 @@ async function summary() {
     activeContracts: (await D.get("SELECT COUNT(*) c FROM contracts WHERE status='ساري'")).c,
     openQuotes: (await D.get("SELECT COUNT(*) c FROM quotes WHERE status IN ('مسودة','مُرسل')")).c,
     kgTotal: (await D.get('SELECT COALESCE(SUM(qty),0) v FROM jobs')).v,
+    unpaid: (await D.get("SELECT COALESCE(SUM(amount-COALESCE(paid,0)),0) v, COUNT(*) c FROM invoices WHERE status!='مدفوعة'")),
+    overdue: (await D.get("SELECT COUNT(*) c FROM invoices WHERE status!='مدفوعة' AND due_date IS NOT NULL AND due_date<>'' AND due_date<date('now')")).c,
+    alerts: [].concat(
+      (await q("SELECT 'ترخيص' t, name n, expiry_date d FROM licenses WHERE expiry_date IS NOT NULL AND expiry_date<>'' AND expiry_date<=date('now','+60 day')")),
+      (await q("SELECT 'استمارة مركبة' t, name n, registration_expiry d FROM vehicles WHERE registration_expiry<>'' AND registration_expiry<=date('now','+60 day')")),
+      (await q("SELECT 'تأمين مركبة' t, name n, insurance_expiry d FROM vehicles WHERE insurance_expiry<>'' AND insurance_expiry<=date('now','+60 day')")),
+      (await q("SELECT 'تصريح نقل' t, name n, permit_expiry d FROM vehicles WHERE permit_expiry<>'' AND permit_expiry<=date('now','+60 day')")),
+      (await q("SELECT 'عقد ينتهي' t, number n, end_date d FROM contracts WHERE status='ساري' AND end_date<>'' AND end_date<=date('now','+60 day')"))
+    ).sort((a,b)=>String(a.d).localeCompare(String(b.d))),
     jobsByStatus: await q('SELECT status k, COUNT(*) v FROM jobs GROUP BY status'),
     wasteByType: await q('SELECT waste_type k, SUM(qty) v FROM jobs GROUP BY waste_type ORDER BY v DESC'),
     monthly: await q("SELECT substr(tx_date,1,7) m, SUM(CASE WHEN kind='إيراد' THEN amount ELSE 0 END) rev, SUM(CASE WHEN kind='مصروف' THEN amount ELSE 0 END) exp FROM transactions WHERE tx_date IS NOT NULL GROUP BY m ORDER BY m"),
@@ -146,7 +164,7 @@ const server = http.createServer(async (req, res) => {
         if (name === 'users') {
           if (!b.password || b.password.length < 8) return send(res, 400, { error: 'كلمة المرور 8 أحرف على الأقل' });
           if (!ROLES[b.role]) return send(res, 400, { error: 'دور غير صحيح' });
-          try { addUser(b.name, b.username, b.role, b.password); } catch { return send(res, 400, { error: 'اسم الدخول مستخدم' }); }
+          try { await addUser(b.name, b.username, b.role, b.password); } catch { return send(res, 400, { error: 'اسم الدخول مستخدم' }); }
           return send(res, 200, { ok: 1 });
         }
         const o = clean(d, b); const ks = Object.keys(o);
