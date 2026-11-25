@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, user_id INTEGER, action
     for (const f of d.f) if (f.t !== 'calc' && !have.includes(f.k)) await D.exec(`ALTER TABLE ${n} ADD COLUMN ${f.k} ${colType(f)}`);
   }
   await D.exec('CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT)');
-  { const T = require('./templates.js'); const q = T.find(t => t.kind === 'عرض سعر'); await D.run("UPDATE templates SET name=?, body=? WHERE name='نموذج عرض السعر الثابت'", q.name, q.body);  const M = T.find(t => t.name.includes('على نموذج العميل')); await D.run("UPDATE templates SET body=? WHERE name=? AND body NOT LIKE '%{{price_rows}}%'", M.body, M.name); 
+  { const T = require('./templates.js'); const q = T.find(t => t.kind === 'عرض سعر'); await D.run("UPDATE templates SET name=?, body=? WHERE name='نموذج عرض السعر الثابت'", q.name, q.body);  const M = T.find(t => t.name.includes('على نموذج العميل')); await D.run("UPDATE templates SET body=? WHERE name=? AND body LIKE '%لا تشمل ضريبة القيمة المضافة. القيمة التقديرية%'", M.body, M.name); 
     await D.run("UPDATE templates SET body=? WHERE kind='عرض سعر' AND body LIKE 'الشروط والأحكام:%الأسعار بالريال السعودي%'", q.body);
     await D.run("UPDATE quotes SET body=? WHERE body LIKE 'الشروط والأحكام:%الأسعار بالريال السعودي%'", q.body); 
     for (const tb of ['templates', 'quotes']) await D.run(`UPDATE ${tb} SET body=replace(body, '- السعر لا يشمل ضريبة القيمة المضافة.' || char(10), '') WHERE body LIKE '- السعر لا يشمل ضريبة القيمة المضافة.%الشروط:%'`); }
