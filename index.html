@@ -1,5 +1,5 @@
 <!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>منظومة إدارة المخلفات الخطرة</title>
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0f6e52"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="المخلفات الخطرة"><meta name="apple-mobile-web-app-status-bar-style" content="default"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="icon" href="/icon-192.png"><title>منظومة إدارة المخلفات الخطرة</title>
 <style>
 :root{--g:#0f6b4f;--g2:#e7f4ee;--bg:#f4f6f5;--tx:#1d2b26;--mut:#6b7a74;--bd:#dde5e1;--red:#c0392b;--amb:#d68910}
 *{box-sizing:border-box}body{margin:0;font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic","Noto Sans Arabic",Arial,sans-serif;background:var(--bg);color:var(--tx);font-size:15px}
@@ -74,4 +74,4 @@ async function form(name,rec){const m=META[name];const inputs=[];for(const f of 
  const calc=()=>{if(name!=='quotes')return;const g=k=>Number(d.querySelector(`[data-k=${k}]`).value||0);$('#tt').textContent='الإجمالي شامل الضريبة: '+fmt(g('qty')*g('unit_price')*1.15)+' ر.س'};d.oninput=calc;calc();
  $('#cn').onclick=()=>d.remove();$('#ok').onclick=async()=>{const b={};d.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);if(name==='users'&&rec&&!b.password)delete b.password;try{await api(rec?`${name}/${rec.id}`:name,rec?'PUT':'POST',b);d.remove();CACHE={};render()}catch(e){d.querySelector('#er').textContent=e.message}}}
 init();
-</script></body></html>
+</script><script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}))</script></body></html>
