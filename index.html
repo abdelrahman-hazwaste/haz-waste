@@ -107,16 +107,16 @@ async function printQuote(r){const cl=(await refs('clients')).find(c=>c.id==r.cl
  const sub=it.reduce((a,x)=>a+(Number(x.q)||0)*(Number(x.p)||0),0),vat=sub*0.15;
  const rows=it.map((x,i)=>`<tr><td>${i+1}</td><td class="l">${esc(x.n||'')}</td><td class="l">${esc(x.d||'')}</td><td>${esc(x.u||'')}</td><td>${esc(x.q)}</td><td>${fm(x.p)}</td><td>${fm((Number(x.q)||0)*(Number(x.p)||0))}</td></tr>`).join('');
  const dt=(r.created_at||'').slice(0,10)||new Date().toISOString().slice(0,10);
- openDoc(LH(`<h2 style="text-align:center;font-size:18pt;margin:0 0 8px">عرض سعر</h2>
+ openDoc(LH(`<style>.qd,.qd pre{font-size:12pt;line-height:1.4}.qd table.q th,.qd table.q td,.qd .tot td{font-size:10.5pt;padding:3px 5px}.qd p{margin:3px 0!important}.qd .tot td{padding:4px 8px}.qd .sig{margin-top:6mm}.qd .meta td{padding:1px 8px}</style><div class="qd"><h2 style="text-align:center;font-size:16pt;margin:0 0 4px">عرض سعر</h2>
 <table class="meta"><tr><td><b>رقم العرض:</b> ${esc(r.number||'')}</td><td><b>التاريخ:</b> ${esc(dt)}</td><td><b>صالح حتى:</b> ${esc(r.valid_until||'')}</td></tr></table>
 <p style="margin:0 0 6px;font-size:inherit;color:inherit;text-align:right">${[SET.cr_no&&'السجل التجاري / الرقم الموحد: '+esc(SET.cr_no),(SET.short_addr||SET.address)&&'العنوان الوطني: '+esc([SET.short_addr,SET.address].filter(Boolean).join(' - '))].filter(Boolean).join('<br>')}</p>
 <p style="margin:8px 0 2px;text-align:right"><b>السادة / ${esc(cl.name||'')}</b> المحترمين${cl.contact?`<br>عناية: ${esc(cl.contact)}`:''}${cl.phone?` &nbsp; جوال: ${esc(cl.phone)}`:''}</p>
 <p style="margin:2px 0 8px;text-align:justify">تحية طيبة وبعد، يسرنا تقديم عرض السعر التالي لخدمات الجمع والنقل والتخلص الآمن من المخلفات الخطرة:</p>
-<table class="q"><tr><th style="width:6%">م</th><th style="width:17%">البند</th><th>الوصف</th><th style="width:9%">الوحدة</th><th style="width:9%">الكمية</th><th style="width:13%">سعر الوحدة</th><th style="width:14%">الإجمالي (ر.س)</th></tr>${rows}</table>
+<table class="q"><tr><th style="width:6%">م</th><th style="width:30%">البند</th><th style="width:20%">الوصف</th><th style="width:9%">الوحدة</th><th style="width:9%">الكمية</th><th style="width:13%">سعر الوحدة</th><th style="width:14%">الإجمالي (ر.س)</th></tr>${rows}</table>
 <table class="tot"><tr><td>المجموع قبل الضريبة</td><td>${fm(sub)}</td></tr><tr><td>ضريبة القيمة المضافة 15%</td><td>${fm(vat)}</td></tr><tr><td>الإجمالي شامل الضريبة (ر.س)</td><td>${fm(sub+vat)}</td></tr></table>
 <div style="margin-top:10px"><pre>${esc(r.body||'')}</pre></div>
-<div class="sig"><div>${esc(SET.name_ar||'')}${stampImg()}<br>الاسم والتوقيع والختم</div><div>اعتماد العميل<br>الاسم والتوقيع والختم</div></div>`))}
-const stampImg=()=>SET.stamp_on==='1'&&SET.stamp?`<br><img src="${SET.stamp}" style="height:30mm;margin:2mm 0">`:'';
+<div class="sig"><div>${esc(SET.name_ar||'')}${stampImg()}</div><div>اعتماد العميل</div></div></div>`))}
+const stampImg=()=>SET.stamp_on==='1'&&SET.stamp?`<br><img src="${SET.stamp}" style="height:22mm;margin:1mm 0">`:'';
 function docHtml(t){const out=[];let tb=[],tx=[];const fl=()=>{if(tx.length){out.push('<pre>'+esc(tx.join('\n'))+'</pre>');tx=[]}if(tb.length){out.push('<table class="d" style="margin:6px 0">'+tb.map((l,i)=>'<tr>'+l.split('|').slice(1,-1).map(c=>(i?'<td>':'<th>')+esc(c.trim())+(i?'</td>':'</th>')).join('')+'</tr>').join('')+'</table>');tb=[]}};for(const l of String(t||'').split('\n')){if(l.trim().startsWith('|')){if(tx.length)fl();tb.push(l.trim())}else{if(tb.length)fl();tx.push(l)}}fl();return out.join('')}
 function printDoc(name,r,cl){const q=name==='quotes';{let t=String((q?r.body:r.contract_text)||''),hd='';if(!q){const i=t.indexOf('\n\n');if(i>0&&i<160){hd='<div style="text-align:center;font-weight:700;font-size:17pt;margin:4px 0 10px;line-height:1.4">'+esc(t.slice(0,i)).replace(/\n/g,'<br>')+'</div>';t=t.slice(i+2)}}openDoc(LH(hd+docHtml(t)+(q||SET.stamp_on!=='1'||!SET.stamp?'':`<div style="text-align:center;margin-top:8mm;page-break-inside:avoid"><b>ختم الشركة</b>${stampImg()}</div>`)))}}
 const waNum=p=>{p=String(p||'').replace(/\D/g,'');if(p.startsWith('00'))p=p.slice(2);else if(p.startsWith('0'))p='966'+p.slice(1);return p};
@@ -174,7 +174,7 @@ async function stampPara(w){if(SET.stamp_on!=='1'||!SET.stamp)return null;const[
 function contractBody(t){const out=[];let tb=[],tx=[];const fl=()=>{if(tx.length){out.push(lines(tx.join('\n'),{sz:28}));tx=[]}if(tb.length){const n=tb[0].split('|').length-2,w=Math.floor(9638/n),ws=Array(n).fill(w);out.push(tbl(tb.map((l,i)=>trow(l.split('|').slice(1,-1).map(c=>c.trim()),ws,{b:i===0,fill:i===0?'E6EFE9':''})),ws),para('',{}));tb=[]}};
  for(const l of String(t||'').split('\n')){if(l.trim().startsWith('|')){if(tx.length)fl();tb.push(l.trim())}else{if(tb.length)fl();tx.push(l)}}fl();return out.join('')}
 async function buildDocx(kind,r){const cl=(await refs('clients')).find(c=>c.id==r.client_id)||{};let body='',st=await stampPara();
- const sigRow=(leftTitle,rightTitle,withStamp)=>{const cw=[4819,4819];const c1=para(leftTitle,{jc:'center',sz:28,b:1})+(withStamp&&st?`<w:p><w:pPr><w:bidi/><w:jc w:val="center"/></w:pPr>${st.xml}</w:p>`:para('',{}))+para('الاسم والتوقيع والختم',{jc:'center',sz:28});const c2=para(rightTitle,{jc:'center',sz:28,b:1})+para('',{})+para('',{})+para('الاسم والتوقيع والختم',{jc:'center',sz:28});return tbl([trow([c1,c2],cw)],cw,{nob:1})};
+ const sigRow=(leftTitle,rightTitle,withStamp)=>{const cw=[4819,4819];const c1=para(leftTitle,{jc:'center',sz:28,b:1})+(withStamp&&st?`<w:p><w:pPr><w:bidi/><w:jc w:val="center"/></w:pPr>${st.xml}</w:p>`:para('',{}))+'';const c2=para(rightTitle,{jc:'center',sz:28,b:1})+para('',{})+para('',{});return tbl([trow([c1,c2],cw)],cw,{nob:1})};
  if(kind==='quotes'){let it=[];try{it=JSON.parse(r.items||'[]')}catch{}if(!it.length&&r.qty)it=[{n:'1',d:r.waste_type||'',u:'كجم',q:r.qty,p:r.unit_price}];
   const sub=it.reduce((a,x)=>a+(Number(x.q)||0)*(Number(x.p)||0),0),vat=sub*.15,dt=(r.created_at||'').slice(0,10)||new Date().toISOString().slice(0,10);
   const ws=[500,1500,2838,900,900,1400,1600];
@@ -222,7 +222,8 @@ async function buildPdf(kind,r){await loadH2C();
  const doc=new DOMParser().parseFromString(html,'text/html'),css=doc.querySelector('style').textContent,inner=doc.querySelector('td.ct').innerHTML;
  const fr=document.createElement('iframe');fr.style.cssText='position:fixed;left:-10000px;top:0;width:794px;height:1200px;border:0;background:#fff';document.body.appendChild(fr);
  try{fr.srcdoc=`<!doctype html><html dir="rtl" lang="ar"><meta charset="utf-8"><style>${css}</style><body><div class="ct" style="padding:0 16mm">${inner}</div></body></html>`;await new Promise(ok=>fr.onload=ok);await new Promise(ok=>setTimeout(ok,400));
-  const bd=fr.contentDocument.body;fr.style.height=bd.scrollHeight+'px';await new Promise(ok=>setTimeout(ok,100));
+  const bd=fr.contentDocument.body;{const w=fr.contentDocument.createTreeWalker(bd,NodeFilter.SHOW_TEXT),L=[];let n;while(n=w.nextNode())L.push(n);const re=/([A-Za-z0-9][A-Za-z0-9.,:\/%\-]*)/;for(const t of L){if(!re.test(t.nodeValue)||t.parentNode.tagName==='STYLE')continue;const f=fr.contentDocument.createDocumentFragment();t.nodeValue.split(re).forEach((s,i)=>{if(!s)return;if(i%2){const sp=fr.contentDocument.createElement('span');sp.dir='ltr';sp.style.unicodeBidi='isolate';sp.textContent=s;f.appendChild(sp)}else f.appendChild(fr.contentDocument.createTextNode(s))});t.parentNode.replaceChild(f,t)}}
+fr.style.height=bd.scrollHeight+'px';await new Promise(ok=>setTimeout(ok,100));
   const S=2,cv=await html2canvas(bd,{scale:S,backgroundColor:'#fff',width:794,windowWidth:794,useCORS:true});
   const PW=794*S,PH=Math.round(1123*S),mm=3.7795*S,hh=(Number(SET.lh_hh)||35)*mm,fh=(Number(SET.lh_fh)||17)*mm,top=SET.lh_header?hh+5*mm:15*mm,bot=SET.lh_footer?fh+5*mm:15*mm,room=Math.floor(PH-top-bot);
   const hi=await loadImg(SET.lh_header),fi=await loadImg(SET.lh_footer),ctx=cv.getContext('2d'),pages=[];let y=0;
