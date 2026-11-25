@@ -157,11 +157,13 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(404); return res.end('not found');
     }
     if (p === '/api/login' && req.method === 'POST') {
-      const ip = req.socket.remoteAddress; const a = attempts[ip] = (attempts[ip]||[]).filter(t=>Date.now()-t<600000);
+      const ip = String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim(); const a = attempts[ip] = (attempts[ip]||[]).filter(t=>Date.now()-t<600000);
       if (a.length >= 10) return send(res, 429, { error: 'محاولات كثيرة، حاول بعد 10 دقائق' });
       const b = await body(req);
-      const u = await D.get("SELECT * FROM users WHERE username=? AND active='1'", String(b.username||''));
-      if (!u || !crypto.timingSafeEqual(Buffer.from(hashPw(String(b.password||''), u.salt)), Buffer.from(u.hash))) { a.push(Date.now()); return send(res, 401, { error: 'بيانات الدخول غير صحيحة' }); }
+      const un = String(b.username||'').trim().toLowerCase();
+      const u = await D.get("SELECT * FROM users WHERE lower(trim(username))=? AND active='1'", un);
+      const okpw = u && [String(b.password||''), String(b.password||'').trim()].some(pw => { try { return crypto.timingSafeEqual(Buffer.from(hashPw(pw, u.salt)), Buffer.from(u.hash)); } catch { return false; } });
+      if (!u || !okpw) { a.push(Date.now()); return send(res, 401, { error: 'بيانات الدخول غير صحيحة' }); }
       const t = crypto.randomBytes(24).toString('hex');
       await D.run('INSERT INTO sessions VALUES(?,?,?)', t, u.id, Date.now()+12*3600e3);
       return send(res, 200, { ok: 1 }, { 'Set-Cookie': `sid=${t}; HttpOnly; Path=/; SameSite=Strict; Max-Age=43200${process.env.HTTPS?'; Secure':''}` });
@@ -200,7 +202,10 @@ const server = http.createServer(async (req, res) => {
         if (name === 'users') {
           if (!b.password || b.password.length < 8) return send(res, 400, { error: 'كلمة المرور 8 أحرف على الأقل' });
           if (!ROLES[b.role]) return send(res, 400, { error: 'دور غير صحيح' });
-          try { await addUser(b.name, b.username, b.role, b.password); } catch { return send(res, 400, { error: 'اسم الدخول مستخدم' }); }
+          const nu = String(b.username||'').trim().toLowerCase();
+          if (!nu || /\s/.test(nu)) return send(res, 400, { error: 'اسم الدخول بدون مسافات' });
+          if (await D.get('SELECT 1 FROM users WHERE lower(trim(username))=?', nu)) return send(res, 400, { error: 'اسم الدخول مستخدم' });
+          try { await addUser(String(b.name||'').trim(), nu, b.role, String(b.password).trim()); } catch (e) { console.error('addUser', e); return send(res, 500, { error: 'تعذر إنشاء المستخدم: ' + String(e.message||e).slice(0,120) }); }
           return send(res, 200, { ok: 1 });
         }
         const o = clean(d, b); const ks = Object.keys(o);
