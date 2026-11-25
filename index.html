@@ -1,0 +1,77 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>منظومة إدارة المخلفات الخطرة</title>
+<style>
+:root{--g:#0f6b4f;--g2:#e7f4ee;--bg:#f4f6f5;--tx:#1d2b26;--mut:#6b7a74;--bd:#dde5e1;--red:#c0392b;--amb:#d68910}
+*{box-sizing:border-box}body{margin:0;font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic","Noto Sans Arabic",Arial,sans-serif;background:var(--bg);color:var(--tx);font-size:15px}
+#app{display:flex;min-height:100vh}
+aside{width:230px;background:#0b3d2e;color:#fff;padding:18px 0;flex-shrink:0}
+aside h1{font-size:16px;margin:0 18px 18px;line-height:1.5}aside h1 small{display:block;font-weight:400;opacity:.7;font-size:12px}
+aside a{display:block;padding:11px 18px;color:#cfe5db;text-decoration:none;cursor:pointer;border-right:4px solid transparent}
+aside a.on,aside a:hover{background:#12563f;color:#fff;border-right-color:#5ee0b0}
+main{flex:1;padding:22px 28px;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px}
+.top h2{margin:0;font-size:22px}.who{font-size:13px;color:var(--mut)}.who b{color:var(--tx)}
+.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;background:var(--g2);color:var(--g)}
+.b-red{background:#fbe5e2;color:var(--red)}.b-amb{background:#fcf0d9;color:var(--amb)}.b-gray{background:#eceff0;color:#555}.b-blue{background:#e3eefb;color:#1f5fa8}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:18px}
+.card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:16px}
+.card .l{color:var(--mut);font-size:13px}.card .v{font-size:26px;font-weight:700;margin-top:6px}.v.pos{color:var(--g)}.v.neg{color:var(--red)}
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:18px}@media(max-width:900px){.grid2{grid-template-columns:1fr}aside{width:70px}aside a{font-size:0;padding:14px}aside h1{display:none}}
+.panel{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:16px;overflow:auto}.panel h3{margin:0 0 12px;font-size:15px}
+table{width:100%;border-collapse:collapse}th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--bd);white-space:nowrap}th{background:#f0f4f2;font-size:13px;color:var(--mut)}tr:hover td{background:#fafcfb}
+button,.btn{background:var(--g);color:#fff;border:0;border-radius:7px;padding:8px 16px;cursor:pointer;font:inherit}button.sec{background:#fff;color:var(--g);border:1px solid var(--g)}button.del{background:#fff;color:var(--red);border:1px solid var(--red);padding:4px 10px}button.sm{padding:4px 10px;font-size:13px}
+input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--bd);border-radius:7px;width:100%;background:#fff}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.form label{font-size:13px;color:var(--mut);display:block;margin-bottom:4px}
+.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;z-index:9}.modal .box{background:#fff;border-radius:12px;padding:22px;width:min(760px,94vw);max-height:90vh;overflow:auto}
+.login{margin:12vh auto;width:min(380px,92vw);background:#fff;padding:30px;border-radius:14px;border:1px solid var(--bd);text-align:center}.login h1{font-size:20px;color:var(--g);margin:0 0 4px}.login p{color:var(--mut);margin:0 0 20px}.login input{margin-bottom:12px}.err{color:var(--red);font-size:13px;margin-bottom:10px}
+.bar{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.bar .n{width:110px}.bar .t{flex:1;background:#eef2f0;border-radius:5px;height:16px;overflow:hidden;display:flex}.bar .t i{display:block;height:100%;background:var(--g)}.bar .t i.e{background:#e0a458}
+.stages{display:flex;gap:6px}.stg{flex:1;text-align:center;padding:12px 4px;border-radius:8px;background:var(--g2)}.stg b{display:block;font-size:22px;color:var(--g)}
+.legend{font-size:12px;color:var(--mut);margin-top:8px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--g);margin-left:4px}.legend i.e{background:#e0a458;margin-right:12px}
+.tools{display:flex;gap:8px;margin-bottom:12px}.tools input{max-width:280px}
+@media print{aside,.tools,button{display:none!important}}
+</style></head><body><div id="app"></div>
+<script>
+const $=s=>document.querySelector(s),app=$('#app');let ME,META,ROLES,CACHE={},view='dashboard';
+const fmt=n=>Number(n||0).toLocaleString('ar-SA-u-nu-latn',{maximumFractionDigits:2});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function api(p,m='GET',b){const r=await fetch('/api/'+p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});const j=await r.json().catch(()=>({}));if(r.status===401&&p!=='login'){return init()}if(!r.ok)throw new Error(j.error||'خطأ');return j}
+function loginView(err){app.innerHTML=`<div class="login"><h1>منظومة إدارة المخلفات الخطرة</h1><p>جمع · نقل · تخلص</p>${err?`<div class="err">${esc(err)}</div>`:''}<input id="u" placeholder="اسم الدخول" autocomplete="username"><input id="p" type="password" placeholder="كلمة المرور" autocomplete="current-password"><button style="width:100%" id="go">دخول</button></div>`;
+ const go=async()=>{try{await api('login','POST',{username:$('#u').value,password:$('#p').value});init()}catch(e){loginView(e.message)}};$('#go').onclick=go;$('#p').onkeydown=e=>e.key==='Enter'&&go()}
+async function init(){try{const r=await fetch('/api/me');if(!r.ok)return loginView();const j=await r.json();ME=j.user;META=j.meta;ROLES=j.roles;shell()}catch(e){console.error(e);loginView()}}
+const NAV=[['dashboard','لوحة التحكم','manager,employee'],['clients'],['quotes'],['contracts'],['jobs'],['finance','الحسابات والتجميع','manager,employee'],['transactions'],['users']];
+function shell(){const items=NAV.filter(n=>n[0]==='dashboard'||n[0]==='finance'?n[2].includes(ME.role):META[n[0]]);if(!items.find(n=>n[0]===view))view=items[0][0];
+ app.innerHTML=`<aside><h1>إدارة المخلفات الخطرة<small>جمع · نقل · تخلص</small></h1>${items.map(n=>`<a data-v="${n[0]}" class="${view===n[0]?'on':''}">${n[1]||META[n[0]].title}</a>`).join('')}<a id="pw">تغيير كلمة المرور</a><a id="lo">تسجيل الخروج</a></aside><main><div class="top"><h2 id="ttl"></h2><div class="who">${esc(ME.name)} <span class="badge">${ROLES[ME.role]}</span></div></div><div id="v"></div></main>`;
+ document.querySelectorAll('aside a[data-v]').forEach(a=>a.onclick=()=>{view=a.dataset.v;shell()});$('#lo').onclick=async()=>{await api('logout');loginView()};
+ $('#pw').onclick=async()=>{const p=prompt('كلمة المرور الجديدة (8 أحرف على الأقل)');if(p){try{await api('password','POST',{password:p});alert('تم التغيير')}catch(e){alert(e.message)}}};render()}
+async function render(){const t=(NAV.find(n=>n[0]===view)||[])[1]||META[view]?.title;$('#ttl').textContent=t;({dashboard,finance}[view]||table)(view)}
+const bcls=s=>({'تم التخلص':'','ساري':'','نشط':'','مقبول':'','إيراد':'','في النقل':'b-blue','تم الجمع':'b-blue','مُرسل':'b-blue','مجدولة':'b-amb','مسودة':'b-gray','محتمل':'b-amb','منتهي':'b-gray','مرفوض':'b-red','موقوف':'b-red','مصروف':'b-red'}[s]??'b-gray');
+async function dashboard(){const s=await api('summary');const net=s.revenue-s.expense,mx=Math.max(1,...s.monthly.map(m=>Math.max(m.rev,m.exp)));const tot=s.jobsByStatus.reduce((a,b)=>a+b.v,0);const st=n=>s.jobsByStatus.find(x=>x.k===n)?.v||0;
+$('#v').innerHTML=`<div class="cards"><div class="card"><div class="l">إجمالي الإيرادات</div><div class="v pos">${fmt(s.revenue)} <small>ر.س</small></div></div><div class="card"><div class="l">إجمالي المصروفات</div><div class="v neg">${fmt(s.expense)} <small>ر.س</small></div></div><div class="card"><div class="l">صافي الربح</div><div class="v ${net>=0?'pos':'neg'}">${fmt(net)} <small>ر.س</small></div></div><div class="card"><div class="l">عقود سارية</div><div class="v">${s.activeContracts}</div></div><div class="card"><div class="l">عروض مفتوحة</div><div class="v">${s.openQuotes}</div></div><div class="card"><div class="l">كمية المخلفات (كجم)</div><div class="v">${fmt(s.kgTotal)}</div></div></div>
+<div class="grid2"><div class="panel"><h3>الإيرادات والمصروفات الشهرية</h3>${s.monthly.map(m=>`<div class="bar"><span class="n">${m.m}</span><div class="t"><i style="width:${m.rev/mx*50}%"></i><i class="e" style="width:${m.exp/mx*50}%"></i></div><span>${fmt(m.rev)} / ${fmt(m.exp)}</span></div>`).join('')}<div class="legend"><i></i>إيراد<i class="e"></i>مصروف</div></div>
+<div class="panel"><h3>الكميات حسب نوع المخلفات (كجم)</h3>${s.wasteByType.map(w=>`<div class="bar"><span class="n">${esc(w.k)}</span><div class="t"><i style="width:${w.v/s.wasteByType[0].v*100}%"></i></div><span>${fmt(w.v)}</span></div>`).join('')}</div></div>
+<div class="panel" style="margin-bottom:18px"><h3>مراحل العمليات (${tot})</h3><div class="stages">${['مجدولة','تم الجمع','في النقل','تم التخلص'].map(n=>`<div class="stg"><b>${st(n)}</b>${n}</div>`).join('')}</div></div>
+<div class="panel"><h3>أداء المسوّقين</h3><table><tr><th>المسوّق</th><th>عروض</th><th>مقبولة</th><th>قيمة المقبول (ر.س)</th></tr>${s.marketers.map(m=>`<tr><td>${esc(m.name)}</td><td>${m.quotes}</td><td>${m.won}</td><td>${fmt(m.wonValue)}</td></tr>`).join('')}</table></div>`}
+async function finance(){const s=await api('summary');const net=s.revenue-s.expense;const cat=k=>s.byCategory.filter(c=>c.kind===k);
+$('#v').innerHTML=`<div class="cards"><div class="card"><div class="l">الإيرادات</div><div class="v pos">${fmt(s.revenue)}</div></div><div class="card"><div class="l">المصروفات</div><div class="v neg">${fmt(s.expense)}</div></div><div class="card"><div class="l">الصافي</div><div class="v ${net>=0?'pos':'neg'}">${fmt(net)}</div></div></div>
+<div class="grid2"><div class="panel"><h3>تجميع الإيرادات حسب البند</h3><table>${cat('إيراد').map(c=>`<tr><td>${esc(c.k)}</td><td>${fmt(c.v)}</td></tr>`).join('')}<tr><th>الإجمالي</th><th>${fmt(s.revenue)}</th></tr></table></div><div class="panel"><h3>تجميع المصروفات حسب البند</h3><table>${cat('مصروف').map(c=>`<tr><td>${esc(c.k)}</td><td>${fmt(c.v)}</td></tr>`).join('')}<tr><th>الإجمالي</th><th>${fmt(s.expense)}</th></tr></table></div></div>
+<div class="panel" style="margin-bottom:18px"><h3>كشف حساب مجمّع للعملاء</h3><table><tr><th>العميل</th><th>عقود سارية</th><th>كمية (كجم)</th><th>الإيرادات (ر.س)</th></tr>${s.byClient.map(c=>`<tr><td>${esc(c.name)}</td><td>${c.contracts}</td><td>${fmt(c.kg)}</td><td>${fmt(c.revenue)}</td></tr>`).join('')}</table></div>
+<div class="panel"><h3>الشهري</h3><table><tr><th>الشهر</th><th>إيراد</th><th>مصروف</th><th>الصافي</th></tr>${s.monthly.map(m=>`<tr><td>${m.m}</td><td>${fmt(m.rev)}</td><td>${fmt(m.exp)}</td><td>${fmt(m.rev-m.exp)}</td></tr>`).join('')}</table></div>
+<p><button class="sec" onclick="print()">طباعة / حفظ PDF</button></p>`}
+async function refs(name){if(!CACHE[name])CACHE[name]=await api(name);return CACHE[name]}
+async function table(name){const m=META[name],rows=await api(name);CACHE[name]=rows;const lookups={};for(const f of m.f)if(f.t==='ref'){const r=await refs(f.ref);lookups[f.k]=Object.fromEntries(r.map(x=>[x.id,x.name||x.number]))}
+ const cell=(f,r)=>{let v=r[f.k];if(f.t==='ref')return esc(lookups[f.k][v]||'-');if(f.t==='num'||f.t==='calc')return v==null?'-':fmt(v);if(f.k==='role')return ROLES[v];if(name==='users'&&f.k==='active')return v==='1'?'نشط':'موقوف';if(f.t==='sel'&&['status','kind'].includes(f.k))return`<span class="badge ${bcls(v)}">${esc(v)}</span>`;return esc(v??'')};
+ $('#v').innerHTML=`<div class="tools"><input id="q" placeholder="بحث..."> ${m.canCreate?'<button id="add">+ إضافة</button>':''}</div><div class="panel"><table><tr>${m.f.filter(f=>f.t!=='pass'&&f.t!=='area').map(f=>`<th>${f.l}</th>`).join('')}<th></th></tr><tbody id="tb"></tbody></table></div>`;
+ const draw=q=>{$('#tb').innerHTML=rows.filter(r=>!q||JSON.stringify(Object.values(r)).includes(q)||m.f.some(f=>f.t==='ref'&&(lookups[f.k][r[f.k]]||'').includes(q))).map(r=>`<tr>${m.f.filter(f=>f.t!=='pass'&&f.t!=='area').map(f=>`<td>${cell(f,r)}</td>`).join('')}<td>${m.canWrite?`<button class="sec sm" data-e="${r.id}">تعديل</button> ${ME.role==='manager'||name==='users'?`<button class="del" data-d="${r.id}">${name==='users'?'إيقاف':'حذف'}</button>`:''}`:''}</td></tr>`).join('')||'<tr><td colspan=20>لا توجد بيانات</td></tr>'};draw('');$('#q').oninput=e=>draw(e.target.value);
+ $('#tb').onclick=async e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.e)form(name,rows.find(r=>r.id==b.dataset.e));if(b.dataset.d&&confirm('تأكيد؟')){try{await api(`${name}/${b.dataset.d}`,'DELETE');CACHE={};table(name)}catch(x){alert(x.message)}}};
+ if($('#add'))$('#add').onclick=()=>form(name)}
+async function form(name,rec){const m=META[name];const inputs=[];for(const f of m.f){if(f.t==='calc')continue;let v=rec?rec[f.k]??'':'';let h;
+ if(f.t==='sel')h=`<select data-k="${f.k}">${f.opts.map(o=>`<option value="${o}" ${String(v)===o?'selected':''}>${(f.labels&&f.labels[o])||o}</option>`).join('')}</select>`;
+ else if(f.t==='ref'){const r=await refs(f.ref);h=`<select data-k="${f.k}"><option value="">-</option>${r.map(x=>`<option value="${x.id}" ${v==x.id?'selected':''}>${esc(x.name||x.number)}</option>`).join('')}</select>`}
+ else if(f.t==='area')h=`<textarea data-k="${f.k}" rows="3">${esc(v)}</textarea>`;
+ else h=`<input data-k="${f.k}" type="${f.t==='num'?'number':f.t==='date'?'date':f.t==='pass'?'password':'text'}" value="${f.t==='pass'?'':esc(v)}" ${f.t==='pass'&&rec?'placeholder="اتركها فارغة بدون تغيير"':''}>`;
+ inputs.push(`<div><label>${f.l}${f.req?' *':''}</label>${h}</div>`)}
+ const d=document.createElement('div');d.className='modal';d.innerHTML=`<div class="box"><h3>${rec?'تعديل':'إضافة'} - ${m.title}</h3><div class="form">${inputs.join('')}</div>${name==='quotes'?'<p id="tt" class="badge"></p>':''}<div id="er" class="err"></div><p><button id="ok">حفظ</button> <button class="sec" id="cn">إلغاء</button></p></div>`;document.body.appendChild(d);
+ const calc=()=>{if(name!=='quotes')return;const g=k=>Number(d.querySelector(`[data-k=${k}]`).value||0);$('#tt').textContent='الإجمالي شامل الضريبة: '+fmt(g('qty')*g('unit_price')*1.15)+' ر.س'};d.oninput=calc;calc();
+ $('#cn').onclick=()=>d.remove();$('#ok').onclick=async()=>{const b={};d.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);if(name==='users'&&rec&&!b.password)delete b.password;try{await api(rec?`${name}/${rec.id}`:name,rec?'PUT':'POST',b);d.remove();CACHE={};render()}catch(e){d.querySelector('#er').textContent=e.message}}}
+init();
+</script></body></html>
