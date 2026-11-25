@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, user_id INTEGER, action
   { const T = require('./templates.js'); const q = T.find(t => t.kind === 'عرض سعر'); await D.run("UPDATE templates SET name=?, body=? WHERE name='نموذج عرض السعر الثابت'", q.name, q.body); }
   if (!await D.get("SELECT 1 x FROM settings WHERE k='lh_header'")) { const L = require('./letterhead.js'); for (const [k, v] of [['lh_header', L.header], ['lh_footer', L.footer], ['lh_hh', String(L.hh)], ['lh_fh', String(L.fh)]]) await D.run('INSERT INTO settings(k,v) VALUES(?,?)', k, v); }
   if (!await D.get('SELECT 1 x FROM templates')) for (const t of require('./templates.js')) await D.run('INSERT INTO templates(name,kind,body) VALUES(?,?,?)', t.name, t.kind, t.body);
+  for (const t of require('./templates.js').filter(t => t.name.includes('على نموذج العميل'))) if (!await D.get('SELECT 1 x FROM templates WHERE name=?', t.name)) await D.run('INSERT INTO templates(name,kind,body) VALUES(?,?,?)', t.name, t.kind, t.body);
   if (!await D.get('SELECT 1 x FROM users')) {
     if (process.env.NO_DEMO) { // production: only the manager account; password from ADMIN_PASSWORD (required)
       if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.length < 12) throw new Error('Set ADMIN_PASSWORD (12+ chars) when NO_DEMO=1');
@@ -161,7 +162,7 @@ const server = http.createServer(async (req, res) => {
         const b = await body(req);
         for (const k of KEYS) if (b[k] !== undefined) await D.run('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v', k, String(b[k]).slice(0, ['logo','lh_header','lh_footer'].includes(k) ? 600000 : 500));
       }
-      const o = { name_ar: 'شركة ريفاد إنفايرونمنتال سيرفيسز', name_en: 'RIFAD Environmental Services Company', tagline: '', tagline_en: '', phone: '050 660 0760', email: 'info@rifades.sa', address: 'الليث، حي رقم 1، شارع وهب الخير، مبنى 8109، الرمز البريدي 28429', short_addr: 'JTDA8109', cr_no: '7055365444', vat_no: '3150859291' };
+      const o = { name_ar: 'شركة ريفاد إنفايرونمنتال سيرفيسز', name_en: 'RIFAD Environmental Services Company', tagline: '', tagline_en: '', phone: '050 660 0760', email: 'info@rifades.sa', address: 'الليث، حي رقم 1، شارع وهب الخير، مبنى 8109، الرمز البريدي 28429', short_addr: 'JTDA8109', cr_no: '7055365444' };
       for (const r of await D.all('SELECT k,v FROM settings')) o[r.k] = r.v;
       return send(res, 200, o);
     }
