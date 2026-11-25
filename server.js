@@ -74,7 +74,8 @@ CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, user_id INTEGER, action
   await D.exec('CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT)');
   { const T = require('./templates.js'); const q = T.find(t => t.kind === 'عرض سعر'); await D.run("UPDATE templates SET name=?, body=? WHERE name='نموذج عرض السعر الثابت'", q.name, q.body);  const M = T.find(t => t.name.includes('على نموذج العميل')); await D.run('UPDATE templates SET body=? WHERE name=?', M.body, M.name); 
     await D.run("UPDATE templates SET body=? WHERE kind='عرض سعر' AND body LIKE 'الشروط والأحكام:%الأسعار بالريال السعودي%'", q.body);
-    await D.run("UPDATE quotes SET body=? WHERE body LIKE 'الشروط والأحكام:%الأسعار بالريال السعودي%'", q.body); }
+    await D.run("UPDATE quotes SET body=? WHERE body LIKE 'الشروط والأحكام:%الأسعار بالريال السعودي%'", q.body); 
+    for (const tb of ['templates', 'quotes']) await D.run(`UPDATE ${tb} SET body=replace(body, '- السعر لا يشمل ضريبة القيمة المضافة.' || char(10), '') WHERE body LIKE '- السعر لا يشمل ضريبة القيمة المضافة.%الشروط:%'`); }
   if (!await D.get("SELECT 1 x FROM settings WHERE k='lh_header'")) { const L = require('./letterhead.js'); for (const [k, v] of [['lh_header', L.header], ['lh_footer', L.footer], ['lh_hh', String(L.hh)], ['lh_fh', String(L.fh)]]) await D.run('INSERT INTO settings(k,v) VALUES(?,?)', k, v); }
   if (process.env.STAMP_B64 && !await D.get("SELECT 1 x FROM settings WHERE k='stamp'")) { await D.run("INSERT INTO settings(k,v) VALUES('stamp',?)", process.env.STAMP_B64); await D.run("INSERT INTO settings(k,v) VALUES('stamp_on','1') ON CONFLICT(k) DO NOTHING"); }
   if (!await D.get('SELECT 1 x FROM templates')) for (const t of require('./templates.js')) await D.run('INSERT INTO templates(name,kind,body) VALUES(?,?,?)', t.name, t.kind, t.body);
