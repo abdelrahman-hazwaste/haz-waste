@@ -155,13 +155,13 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { user: u, roles: ROLES, meta });
     }
     if (p === '/api/settings') {
-      const KEYS = ['name_ar','name_en','tagline','tagline_en','phone','email','address','cr_no','vat_no','website','logo','footer_note','lh_header','lh_footer','lh_hh','lh_fh'];
+      const KEYS = ['name_ar','name_en','tagline','tagline_en','phone','email','address','cr_no','vat_no','website','logo','footer_note','lh_header','lh_footer','lh_hh','lh_fh','short_addr'];
       if (req.method === 'PUT') {
         if (u.role !== 'manager') return send(res, 403, { error: 'غير مصرح' });
         const b = await body(req);
         for (const k of KEYS) if (b[k] !== undefined) await D.run('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v', k, String(b[k]).slice(0, ['logo','lh_header','lh_footer'].includes(k) ? 600000 : 500));
       }
-      const o = { name_ar: 'ريفاد للخدمات البيئية', name_en: 'RIFAD Environmental Services', tagline: '', tagline_en: '', phone: '050 660 0760', email: 'info@rifades.sa', address: 'Jeddah, Saudi Arabia' };
+      const o = { name_ar: 'شركة ريفاد إنفايرونمنتال سيرفيسز', name_en: 'RIFAD Environmental Services Company', tagline: '', tagline_en: '', phone: '050 660 0760', email: 'info@rifades.sa', address: 'الليث، حي رقم 1، شارع وهب الخير، مبنى 8109، الرمز البريدي 28429', short_addr: 'JTDA8109', cr_no: '7055365444', vat_no: '3150859291' };
       for (const r of await D.all('SELECT k,v FROM settings')) o[r.k] = r.v;
       return send(res, 200, o);
     }
